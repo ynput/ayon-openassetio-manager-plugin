@@ -1,0 +1,1 @@
+& poetry run openassetio-traitgen -o .\ayon-traits -g python -v .\traits.yml
