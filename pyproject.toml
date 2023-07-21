@@ -1,0 +1,42 @@
+[tool.poetry]
+name = "AYON OpenAssetIO Manager Plugin"
+version = "0.1.0"
+description = "AYON Manager Plugin for OpenAssetIO hosts."
+authors = ["AYON Team <info@ynput.io>"]
+license = "Apache-2.0"
+homepage = "https://github.com/ynput/ayon-openassetio-manager-plugin"
+documentation = "https://openpype.io/docs/artist_getting_started"
+repository = "https://github.com/ynput/ayon-openassetio-manager-plugin"
+readme = "README.md"
+keywords = ["AYON", "OpenAssetIO", "asset", "automation", "tracking", "asset management"]
+packages = [
+    {include = "AyonOpenAssetIOManager"},
+    {include = "LICENSE"},
+    {include = "README.md"},
+    {include = "setup.py"},
+    {include = "pyproject.toml"},
+    {include = "poetry.lock"}
+]
+
+[tool.poetry.dependencies]
+python = ">=3.9.1"
+requests = "*"
+openassetio= "*"
+
+[tool.poetry.group.dev.dependencies]
+openassetio-traitgen = "*"
+flake8 = "*"
+mypy = "*"
+isort = "*"
+
+[tool.poetry.group.test.dependencies]
+pytest = "*"
+pytest-print = "*"
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/ynput/issues"
+"Discussions" = "https://github.com/ynput/discussions"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
