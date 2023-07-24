@@ -29,7 +29,7 @@ traits:
           - entity
         properties:
           version:
-            type: string
+            type: integer
             description: >
               Version of the entity.
           versionId:
@@ -59,6 +59,34 @@ traits:
             #    type: dictionary
             #    description: >
             #        Context snapshot at the time of representation creation.
+      Tagged:
+          description: >
+            A trait indicating the tags of an entity in AYON.
+          usage:
+            - entity
+          properties:
+            tags:
+              type: string
+              description: >
+                Tags of the entity.
+      Transient:
+        description: >
+          A trait indicating a transient entity.
+        usage:
+          - entity
+        properties:
+          lifetime:
+            type: string
+            description: >
+              Lifetime of the entity. "session" means the entity is valid
+              for lifetime of the session (running DCC for example). "process"
+              means the entity is valid for lifetime of the process (running publish)
+              "timebased" means the entity is valid for a specific time period specified
+              by ttl.
+          ttl:
+            type: integer
+            description: >
+              Time to live of the entity. 0 means infinite.
   time:
     description: Traits related to time.
     members:
@@ -118,6 +146,22 @@ traits:
             type: boolean
             description: >
               Whether the sequence allows gaps.
+      Animation:
+        description: >
+          A trait indicating an animation.
+        usage:
+          - entity
+        properties:
+          loop:
+            type: boolean
+            description: >
+              Indicate if animation is looped.
+      Cache:
+        description: >
+          A trait indicating a cached entity.
+        usage:
+          - entity
+
   raster:
     description: Traits related to raster images.
     members:
@@ -147,14 +191,18 @@ traits:
             type: float
             description: >
               Pixel aspect ratio of the image.
-          frameAspectRatio:
-            type: float
-            description: >
-              Frame aspect ratio of the image.
           compression:
             type: string
             description: >
               Compression of the image.
+          overscanWidth:
+            type: integer
+            description: >
+              Overscan width of the image.
+          overscanHeight:
+            type: integer
+            description: >
+              Overscan height of the image.
       ColorManaged:
         description: >
           A trait indicating a color managed image.
@@ -165,30 +213,168 @@ traits:
             type: string
             description: >
               Color space of the image.
-          colorSpaceTransform:
+          configPath:
             type: string
             description: >
-              Color space transform of the image.
-          colorSpaceTransformVersion:
+              Config path of the image.
+          configTemplate:
             type: string
             description: >
-              Color space transform version of the image.
-          colorSpaceTransformConfig:
+              Config template.
+          display:
             type: string
             description: >
-              Color space transform config of the image.
-          colorSpaceTransformContext:
+              Color space display of the image.
+          view:
             type: string
             description: >
-              Color space transform context of the image.
-      # TODO: Add more properties
-      LensDistortion:
+              Color space view of the image.
+      Texture:
         description: >
-          A trait indicating a lens distorted image.
+          A trait indicating a texture.
+        usage:
+            - entity
+  geo:
+    description: Traits related to geometry.
+    members:
+      Model:
+        description: >
+                  A trait indicating a model.
         usage:
           - entity
         properties:
-          lensDistortionModel:
+          boundingBox:
             type: string
             description: >
-              Lens distortion model of the image.
+              Bounding box of the model.
+      PointCache:
+        description: >
+          A trait indicating a pointcache.
+        usage:
+          - entity
+      Rig:
+        description: >
+          A trait indicating a rig.
+        usage:
+          - entity
+      Camera:
+        description: >
+          A trait indicating a camera.
+        usage:
+          - entity
+      Look:
+        description: >
+          A trait indicating a look.
+        usage:
+          - entity
+      Volume:
+        description: >
+          A trait indicating a volume.
+        usage:
+          - entity
+        properties:
+          boundingBox:
+            type: string
+            description: >
+              Bounding box of the volume.
+          grids:
+            type: string
+            description: >
+              Grids of the volume.
+
+      Archive:
+        description: >
+          A trait indicating an archive.
+        usage:
+          - entity
+        properties:
+          renderer:
+            type: string
+            description: >
+              Renderer of the archive.
+
+      Proxy:
+        description: >
+          A trait indicating a proxy.
+        usage:
+          - entity
+  scene:
+    description: Traits related to scene.
+    members:
+      Workfile:
+        description: >
+          A trait indicating a workfile.
+        usage:
+            - entity
+        properties:
+          type:
+            type: string
+            description: >
+              Type of the workfile - like Maya Binary, Maya ASCII, etc.
+          host:
+            type: string
+            description: >
+              Name and version of the DCC that created this workfile.
+      Usd:
+        description: >
+          A trait indicating a USD file.
+        usage:
+            - entity
+  sound:
+    description: Traits related to sound.
+    members:
+      Audio:
+        description: >
+          A trait indicating a sound.
+        usage:
+          - entity
+        properties:
+          duration:
+            type: float
+            description: >
+              Duration of the sound in seconds.
+          channels:
+            type: integer
+            description: >
+              Number of channels in the sound.
+          sampleRate:
+            type: integer
+            description: >
+              Sample rate of the sound.
+          bitDepth:
+            type: integer
+            description: >
+              Bit depth of the sound.
+          compression:
+            type: string
+            description: >
+              Compression of the sound.
+
+  meta:
+    description: Traits related to metadata.
+    members:
+      Relationship:
+        description: >
+          A trait indicating a relationship.
+        usage:
+          - entity
+      XMP:
+        description: >
+          A trait indicating an XMP metadata.
+        usage:
+          - entity
+        properties:
+          xmp:
+            type: string
+            description: >
+              XMP metadata.
+      Annotation:
+        description: >
+          A trait indicating an annotation.
+        usage:
+          - entity
+        properties:
+          annotation:
+            type: string
+            description: >
+              Annotation.

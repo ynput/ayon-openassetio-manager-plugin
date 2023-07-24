@@ -8,6 +8,8 @@ from openassetio import (
 from openassetio.exceptions import MalformedEntityReference, PluginError
 from openassetio.hostApi import Manager
 from openassetio.managerApi import ManagerInterface
+import openassetio_mediacreation.traits as mediacreation_traits
+import ayon_
 
 from . import ayon
 

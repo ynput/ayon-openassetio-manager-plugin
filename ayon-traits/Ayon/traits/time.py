@@ -12,6 +12,143 @@ from typing import Union
 from openassetio import TraitsData
 
 
+class AnimationTrait:
+    """
+    A trait indicating an animation.
+    Usage: entity
+    """
+    kId = "Ayon:time.Animation"
+
+    def __init__(self, traitsData):
+        """
+        Construct this trait view, wrapping the given data.
+
+        @param traitsData @fqref{TraitsData}} "TraitsData" The target
+        data that holds/will hold the traits properties.
+        """
+        self.__data = traitsData
+
+    def isImbued(self):
+        """
+        Checks whether the data this trait has been applied to
+        actually has this trait.
+        @return `True` if the underlying data has this trait, `False`
+        otherwise.
+        """
+        return self.isImbuedTo(self.__data)
+
+    @classmethod
+    def isImbuedTo(cls, traitsData):
+        """
+        Checks whether the given data actually has this trait.
+        @param traitsData: Data to check for trait.
+        @return `True` if the underlying data has this trait, `False`
+        otherwise.
+        """
+        return traitsData.hasTrait(cls.kId)
+
+    def imbue(self):
+        """
+        Adds this trait to the held data.
+
+        If the data already has this trait, it is a no-op.
+        """
+        self.__data.addTrait(self.kId)
+
+    @classmethod
+    def imbueTo(cls, traitsData):
+        """
+        Adds this trait to the provided data.
+
+        If the data already has this trait, it is a no-op.
+        """
+        traitsData.addTrait(cls.kId)
+
+    
+    def setLoop(self, loop: bool):
+        """
+        Sets the loop property.
+
+        Indicate if animation is looped.
+        """
+        if not isinstance(loop, bool):
+            raise TypeError("loop must be a 'bool'.")
+        self.__data.setTraitProperty(self.kId, "loop", loop)
+
+    def getLoop(self, defaultValue: bool=None) -> Union[bool, None]:
+        """
+        Gets the value of the loop property or the supplied default.
+
+        Indicate if animation is looped.
+        """
+        value = self.__data.getTraitProperty(self.kId, "loop")
+        if value is None:
+            return defaultValue
+
+        if not isinstance(value, bool):
+            if defaultValue is None:
+                raise TypeError(f"Invalid stored value type: '{type(value).__name__}' should be 'bool'.")
+            return defaultValue
+        return value
+        
+    
+
+
+class CacheTrait:
+    """
+    A trait indicating a cached entity.
+    Usage: entity
+    """
+    kId = "Ayon:time.Cache"
+
+    def __init__(self, traitsData):
+        """
+        Construct this trait view, wrapping the given data.
+
+        @param traitsData @fqref{TraitsData}} "TraitsData" The target
+        data that holds/will hold the traits properties.
+        """
+        self.__data = traitsData
+
+    def isImbued(self):
+        """
+        Checks whether the data this trait has been applied to
+        actually has this trait.
+        @return `True` if the underlying data has this trait, `False`
+        otherwise.
+        """
+        return self.isImbuedTo(self.__data)
+
+    @classmethod
+    def isImbuedTo(cls, traitsData):
+        """
+        Checks whether the given data actually has this trait.
+        @param traitsData: Data to check for trait.
+        @return `True` if the underlying data has this trait, `False`
+        otherwise.
+        """
+        return traitsData.hasTrait(cls.kId)
+
+    def imbue(self):
+        """
+        Adds this trait to the held data.
+
+        If the data already has this trait, it is a no-op.
+        """
+        self.__data.addTrait(self.kId)
+
+    @classmethod
+    def imbueTo(cls, traitsData):
+        """
+        Adds this trait to the provided data.
+
+        If the data already has this trait, it is a no-op.
+        """
+        traitsData.addTrait(cls.kId)
+
+    
+
+
 class ClipTrait:
     """
     A trait indicating time defined clip with start, end and rate.

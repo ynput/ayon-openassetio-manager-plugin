@@ -91,23 +91,23 @@ class ColorManagedTrait:
             return defaultValue
         return value
         
-    def setColorSpaceTransform(self, colorSpaceTransform: str):
+    def setConfigPath(self, configPath: str):
         """
-        Sets the colorSpaceTransform property.
+        Sets the configPath property.
 
-        Color space transform of the image.
+        Config path of the image.
         """
-        if not isinstance(colorSpaceTransform, str):
-            raise TypeError("colorSpaceTransform must be a 'str'.")
-        self.__data.setTraitProperty(self.kId, "colorSpaceTransform", colorSpaceTransform)
+        if not isinstance(configPath, str):
+            raise TypeError("configPath must be a 'str'.")
+        self.__data.setTraitProperty(self.kId, "configPath", configPath)
 
-    def getColorSpaceTransform(self, defaultValue: str=None) -> Union[str, None]:
+    def getConfigPath(self, defaultValue: str=None) -> Union[str, None]:
         """
-        Gets the value of the colorSpaceTransform property or the supplied default.
+        Gets the value of the configPath property or the supplied default.
 
-        Color space transform of the image.
+        Config path of the image.
         """
-        value = self.__data.getTraitProperty(self.kId, "colorSpaceTransform")
+        value = self.__data.getTraitProperty(self.kId, "configPath")
         if value is None:
             return defaultValue
 
@@ -117,23 +117,23 @@ class ColorManagedTrait:
             return defaultValue
         return value
         
-    def setColorSpaceTransformConfig(self, colorSpaceTransformConfig: str):
+    def setConfigTemplate(self, configTemplate: str):
         """
-        Sets the colorSpaceTransformConfig property.
+        Sets the configTemplate property.
 
-        Color space transform config of the image.
+        Config template.
         """
-        if not isinstance(colorSpaceTransformConfig, str):
-            raise TypeError("colorSpaceTransformConfig must be a 'str'.")
-        self.__data.setTraitProperty(self.kId, "colorSpaceTransformConfig", colorSpaceTransformConfig)
+        if not isinstance(configTemplate, str):
+            raise TypeError("configTemplate must be a 'str'.")
+        self.__data.setTraitProperty(self.kId, "configTemplate", configTemplate)
 
-    def getColorSpaceTransformConfig(self, defaultValue: str=None) -> Union[str, None]:
+    def getConfigTemplate(self, defaultValue: str=None) -> Union[str, None]:
         """
-        Gets the value of the colorSpaceTransformConfig property or the supplied default.
+        Gets the value of the configTemplate property or the supplied default.
 
-        Color space transform config of the image.
+        Config template.
         """
-        value = self.__data.getTraitProperty(self.kId, "colorSpaceTransformConfig")
+        value = self.__data.getTraitProperty(self.kId, "configTemplate")
         if value is None:
             return defaultValue
 
@@ -143,23 +143,23 @@ class ColorManagedTrait:
             return defaultValue
         return value
         
-    def setColorSpaceTransformContext(self, colorSpaceTransformContext: str):
+    def setDisplay(self, display: str):
         """
-        Sets the colorSpaceTransformContext property.
+        Sets the display property.
 
-        Color space transform context of the image.
+        Color space display of the image.
         """
-        if not isinstance(colorSpaceTransformContext, str):
-            raise TypeError("colorSpaceTransformContext must be a 'str'.")
-        self.__data.setTraitProperty(self.kId, "colorSpaceTransformContext", colorSpaceTransformContext)
+        if not isinstance(display, str):
+            raise TypeError("display must be a 'str'.")
+        self.__data.setTraitProperty(self.kId, "display", display)
 
-    def getColorSpaceTransformContext(self, defaultValue: str=None) -> Union[str, None]:
+    def getDisplay(self, defaultValue: str=None) -> Union[str, None]:
         """
-        Gets the value of the colorSpaceTransformContext property or the supplied default.
+        Gets the value of the display property or the supplied default.
 
-        Color space transform context of the image.
+        Color space display of the image.
         """
-        value = self.__data.getTraitProperty(self.kId, "colorSpaceTransformContext")
+        value = self.__data.getTraitProperty(self.kId, "display")
         if value is None:
             return defaultValue
 
@@ -169,23 +169,23 @@ class ColorManagedTrait:
             return defaultValue
         return value
         
-    def setColorSpaceTransformVersion(self, colorSpaceTransformVersion: str):
+    def setView(self, view: str):
         """
-        Sets the colorSpaceTransformVersion property.
+        Sets the view property.
 
-        Color space transform version of the image.
+        Color space view of the image.
         """
-        if not isinstance(colorSpaceTransformVersion, str):
-            raise TypeError("colorSpaceTransformVersion must be a 'str'.")
-        self.__data.setTraitProperty(self.kId, "colorSpaceTransformVersion", colorSpaceTransformVersion)
+        if not isinstance(view, str):
+            raise TypeError("view must be a 'str'.")
+        self.__data.setTraitProperty(self.kId, "view", view)
 
-    def getColorSpaceTransformVersion(self, defaultValue: str=None) -> Union[str, None]:
+    def getView(self, defaultValue: str=None) -> Union[str, None]:
         """
-        Gets the value of the colorSpaceTransformVersion property or the supplied default.
+        Gets the value of the view property or the supplied default.
 
-        Color space transform version of the image.
+        Color space view of the image.
         """
-        value = self.__data.getTraitProperty(self.kId, "colorSpaceTransformVersion")
+        value = self.__data.getTraitProperty(self.kId, "view")
         if value is None:
             return defaultValue
 
@@ -329,32 +329,6 @@ class ImageTrait:
             return defaultValue
         return value
         
-    def setFrameAspectRatio(self, frameAspectRatio: float):
-        """
-        Sets the frameAspectRatio property.
-
-        Frame aspect ratio of the image.
-        """
-        if not isinstance(frameAspectRatio, float):
-            raise TypeError("frameAspectRatio must be a 'float'.")
-        self.__data.setTraitProperty(self.kId, "frameAspectRatio", frameAspectRatio)
-
-    def getFrameAspectRatio(self, defaultValue: float=None) -> Union[float, None]:
-        """
-        Gets the value of the frameAspectRatio property or the supplied default.
-
-        Frame aspect ratio of the image.
-        """
-        value = self.__data.getTraitProperty(self.kId, "frameAspectRatio")
-        if value is None:
-            return defaultValue
-
-        if not isinstance(value, float):
-            if defaultValue is None:
-                raise TypeError(f"Invalid stored value type: '{type(value).__name__}' should be 'float'.")
-            return defaultValue
-        return value
-        
     def setHeight(self, height: int):
         """
         Sets the height property.
@@ -372,6 +346,58 @@ class ImageTrait:
         Height of the image in pixels.
         """
         value = self.__data.getTraitProperty(self.kId, "height")
+        if value is None:
+            return defaultValue
+
+        if not isinstance(value, int):
+            if defaultValue is None:
+                raise TypeError(f"Invalid stored value type: '{type(value).__name__}' should be 'int'.")
+            return defaultValue
+        return value
+        
+    def setOverscanHeight(self, overscanHeight: int):
+        """
+        Sets the overscanHeight property.
+
+        Overscan height of the image.
+        """
+        if not isinstance(overscanHeight, int):
+            raise TypeError("overscanHeight must be a 'int'.")
+        self.__data.setTraitProperty(self.kId, "overscanHeight", overscanHeight)
+
+    def getOverscanHeight(self, defaultValue: int=None) -> Union[int, None]:
+        """
+        Gets the value of the overscanHeight property or the supplied default.
+
+        Overscan height of the image.
+        """
+        value = self.__data.getTraitProperty(self.kId, "overscanHeight")
+        if value is None:
+            return defaultValue
+
+        if not isinstance(value, int):
+            if defaultValue is None:
+                raise TypeError(f"Invalid stored value type: '{type(value).__name__}' should be 'int'.")
+            return defaultValue
+        return value
+        
+    def setOverscanWidth(self, overscanWidth: int):
+        """
+        Sets the overscanWidth property.
+
+        Overscan width of the image.
+        """
+        if not isinstance(overscanWidth, int):
+            raise TypeError("overscanWidth must be a 'int'.")
+        self.__data.setTraitProperty(self.kId, "overscanWidth", overscanWidth)
+
+    def getOverscanWidth(self, defaultValue: int=None) -> Union[int, None]:
+        """
+        Gets the value of the overscanWidth property or the supplied default.
+
+        Overscan width of the image.
+        """
+        value = self.__data.getTraitProperty(self.kId, "overscanWidth")
         if value is None:
             return defaultValue
 
@@ -436,12 +462,12 @@ class ImageTrait:
     
 
 
-class LensDistortionTrait:
+class TextureTrait:
     """
-    A trait indicating a lens distorted image.
+    A trait indicating a texture.
     Usage: entity
     """
-    kId = "Ayon:raster.LensDistortion"
+    kId = "Ayon:raster.Texture"
 
     def __init__(self, traitsData):
         """
@@ -488,32 +514,5 @@ class LensDistortionTrait:
         """
         traitsData.addTrait(cls.kId)
 
-    
-    def setLensDistortionModel(self, lensDistortionModel: str):
-        """
-        Sets the lensDistortionModel property.
-
-        Lens distortion model of the image.
-        """
-        if not isinstance(lensDistortionModel, str):
-            raise TypeError("lensDistortionModel must be a 'str'.")
-        self.__data.setTraitProperty(self.kId, "lensDistortionModel", lensDistortionModel)
-
-    def getLensDistortionModel(self, defaultValue: str=None) -> Union[str, None]:
-        """
-        Gets the value of the lensDistortionModel property or the supplied default.
-
-        Lens distortion model of the image.
-        """
-        value = self.__data.getTraitProperty(self.kId, "lensDistortionModel")
-        if value is None:
-            return defaultValue
-
-        if not isinstance(value, str):
-            if defaultValue is None:
-                raise TypeError(f"Invalid stored value type: '{type(value).__name__}' should be 'str'.")
-            return defaultValue
-        return value
-        
     
 
