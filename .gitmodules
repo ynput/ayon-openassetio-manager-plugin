@@ -1,0 +1,3 @@
+[submodule "tools/modules/powershell/PSWriteColor"]
+	path = tools/modules/powershell/PSWriteColor
+	url = https://github.com/EvotecIT/PSWriteColor.git

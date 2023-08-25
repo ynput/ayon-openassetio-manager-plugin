@@ -18,7 +18,8 @@ PS> .\manage.ps1 create-env --verbose
 
 #>
 
-$root = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
+$script_dir = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
+$repo_root = (Get-Item $script_dir).parent.FullName
 
 if (-not (Test-Path 'env:POETRY_HOME')) {
     $env:POETRY_HOME = "$root\.poetry"
@@ -119,18 +120,37 @@ function Initialize-Environment {
         Write-Color -Text "!!! ", "Poetry command failed." -Color Red, Yellow
         Exit-WithCode 1
     }
-    if (Test-Path -PathType Container -Path "$($repo_root)\.git") {
-        Write-Color -Text ">>> ", "Installing pre-commit hooks ..." -Color Green, White
-        & "$env:POETRY_HOME\bin\poetry" run pre-commit install
-        if ($LASTEXITCODE -ne 0)
-        {
-            Write-Color -Text "!!! ", "Installation of pre-commit hooks failed." -Color Red, Yellow
-        }
-    }
 
     $endTime = [int][double]::Parse((Get-Date -UFormat %s))
-    Restore-Cwd
-    Write-Color -Text ">>> ", "Virtual environment created." -Color Green, White
+    $duration = $endTime - $startTime
+    Write-Color -Text ">>> ", "Virtual environment created in ", $duration, " secs." -Color Green, White, Cyan, White
+}
+
+function New-TemporaryDirectory {
+    $parent = [System.IO.Path]::GetTempPath()
+    [string] $name = [System.Guid]::NewGuid()
+    New-Item -ItemType Directory -Path (Join-Path $parent $name)
+}
+
+function Initialize-Traits {
+    $temp_traits = New-TemporaryDirectory
+    Write-Color ">>> ", "Generating traits ..." -Color Green, Gray
+    Write-Color ">>> ", "Temporary directory: ", $temp_traits -Color Green, Gray, Cyan
+
+    & "$env:POETRY_HOME\bin\poetry.exe" run openassetio-traitgen -o $temp_traits -g python -v "$($repo_root)\traits.yml"
+    Write-Color ">>> ", "Moving traits to repository ..." -Color Green, Gray
+    Move-Item -Path $temp_traits\Ayon\traits\* -Destination "$($repo_root)\AyonOpenAssetIOManager\ayon_traits" -Force
+    Write-Color -Text ">>> ", "Traits generated." -Color Green, White
+}
+
+function Invoke-Tests {
+    Write-Color -Text ">>> ", "Running tests ..." -Color Green, Gray
+    & "$env:POETRY_HOME\bin\poetry.exe" run pytest -v
+    if ($LASTEXITCODE -ne 0) {
+        Write-Color -Text "!!! ", "Tests failed." -Color Red, Yellow
+        Exit-WithCode 1
+    }
+    Write-Color -Text ">>> ", "Tests passed." -Color Green, White
 }
 
 function Main {
@@ -150,12 +170,5 @@ function Main {
         Show-Usage
     }
 }
-
-if (-not (Test-Path -PathType Container -Path "$($env:POETRY_HOME)\bin")) {
-    Write-Host "Poetry not found, installing locally ..."
-    Install-Poetry
-}
-
-& "$env:POETRY_HOME\bin\poetry" install --no-root --ansi
 
 Main
