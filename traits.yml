@@ -281,6 +281,29 @@ traits:
             type: string
             description: >
               Grids of the volume.
+      SpatialContent:
+        description: >
+          A trait indicating a spatial content.
+        usage:
+          - entity
+        properties:
+          boundingBox:
+            type: string
+            description: >
+              Bounding box of the spatial content.
+          upAxis:
+            type: string
+            description: >
+              Up axis of the spatial content.
+          frontAxis:
+            type: string
+            description: >
+              Front axis of the spatial content.
+          units:
+            type: string
+            description: >
+              Units of the spatial content.
+            
 
       Archive:
         description: >
