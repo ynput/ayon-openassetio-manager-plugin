@@ -201,10 +201,10 @@ def project(printer) -> pytest.fixture:
     # Create a task
     response = session.post(
         f"{AYON_SERVER_URL}/api/projects/{project_name}/tasks", json={
-        "name": task_name,
-        "taskType": "rendering",
-        "folderId": folder_id,
-    })
+            "name": task_name,
+            "taskType": "rendering",
+            "folderId": folder_id,
+        })
     assert response.status_code == 201
     task_id = response.json()["id"]
 
@@ -293,10 +293,12 @@ def project(printer) -> pytest.fixture:
         task=IdNamePair(name=task_name, id=task_id),
         product=IdNamePair(name=product_name, id=product_id),
         version=IdNamePair(name=f"v{version:03d}", id=version_id),
-        representation=IdNamePair(name=representation_name, id=representation_id),
+        representation=IdNamePair(
+            name=representation_name, id=representation_id),
     )
 
     # teardown the project
     printer(f"tearing down project {project_name}...")
-    # response = session.delete(f"{AYON_SERVER_URL}/api/projects/{project_name}")
-    # assert response.status_code == 204
+    response = session.delete(
+        f"{AYON_SERVER_URL}/api/projects/{project_name}")
+    assert response.status_code == 204

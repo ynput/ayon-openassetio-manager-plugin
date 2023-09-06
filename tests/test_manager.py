@@ -12,7 +12,7 @@ def test_manager_discovery(plugin_path_env, manager_factory, printer):
     assert "io.ynput.ayon.openassetio.manager" in managers.keys()
 
 
-def test_manager_creation(manager, printer):
+def test_manager_creation(manager):
     assert manager is not None
 
 
@@ -32,7 +32,7 @@ def test_entity_reference_valid(manager, printer):
         "http://foo.bar.baz")
 
 
-def test_entity_reference_exists(project, manager, printer):
+def test_entity_reference_exists(project, manager):
 
     project: ProjectInfo
     result = manager.entityExists(
@@ -55,11 +55,9 @@ def test_entity_reference_exists(project, manager, printer):
     assert result[1] is False
 
 
-def test_resolve(project, manager, printer):
+def test_resolve(project, manager):
     project: ProjectInfo
     context = manager.createContext()
-    # context.access = openassetio.hostApi.AccessMode.kRead
-    # context.retention = openassetio.hostApi.RetentionMode.kTemporary
 
     result = manager.resolve(entityReferences=[
             openassetio.EntityReference(
@@ -73,10 +71,14 @@ def test_resolve(project, manager, printer):
         traitSet={mc_traits.content.LocatableContentTrait.kId},
         context=context)
 
-    assert result[0] == (
-        f"C:/projects/{project.project_name}/"
-        f"{project.folder.name}/publish/render/"
-        f"{project.product.name}/{project.version.name}/"
-        f"{project.project_code}_{project.folder.name}_"
-        f"{project.product.name}_{project.version.name}.exr"
-    )
+    # result: List[openassetio.TraitsData]
+    assert result[0].hasTrait(mc_traits.content.LocatableContentTrait.kId)
+    assert result[0].getTraitProperty(
+        mc_traits.content.LocatableContentTrait.kId,
+        "location") == os.path.normpath(
+            f"C:/projects/{project.project_name}/"
+            f"{project.folder.name}/publish/render/"
+            f"{project.product.name}/{project.version.name}/"
+            f"{project.project_code}_{project.folder.name}_"
+            f"{project.product.name}_{project.version.name}.exr"
+        )
