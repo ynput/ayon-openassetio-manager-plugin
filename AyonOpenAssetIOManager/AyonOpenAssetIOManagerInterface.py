@@ -1,15 +1,16 @@
 import os
 from typing import Any, List, Set
 
+from . import ayon_traits
 import openassetio
+import openassetio_mediacreation.traits as mc_traits
+from openassetio_mediacreation.traits.managementPolicy import ManagedTrait
 import requests
 from openassetio import (
     BatchElementError, EntityReference, TraitsData, constants)
 from openassetio.exceptions import MalformedEntityReference, PluginError
 from openassetio.hostApi import Manager
 from openassetio.managerApi import ManagerInterface
-import openassetio_mediacreation.traits as mediacreation_traits
-import ayon_
 
 from . import ayon
 
@@ -58,11 +59,14 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
                          traitSets: List[Set[str]],
                          context: openassetio.Context,
                          hostSession: openassetio.managerApi.HostSession) -> List[openassetio.TraitsData]:  # noqa: E501,N802, N803
-        access = "read" if context.isForRead() else "write"
-        return [
-            self.__dict_to_traits_data(ayon.management_policy(trait_set, access, self.__library))
-            for trait_set in traitSets
-        ]
+        policies = []
+        for trait_set in traitSets:
+            traits_data = TraitsData()
+            if context.isForRead() and mc_traits.content.LocatableContentTrait.kId in trait_set:  # noqa: E501
+                ManagedTrait.imbueTo(traits_data)
+                mc_traits.content.LocatableContentTrait.imbueTo(traits_data)
+            policies.append(traits_data)
+        return policies
 
     def isEntityReferenceString(self, some_string, host_session):
         return some_string.startswith(self.__reference_prefix)
@@ -89,12 +93,22 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
         return result
 
     def resolve(
-        self, entityReferences, traitSet, context, hostSession, successCallback, errorCallback
+        self, entityReferences, traitSet, context,
+        hostSession, successCallback, errorCallback
     ):
+        # if there is no LocatableContentTrait (path), bail out.
+        if mc_traits.content.LocatableContentTrait.kId not in traitSet:
+            for idx in range(len(entityReferences)):
+                successCallback(idx, TraitsData())
+            return
+
+        payload = {"uris": [str(e) for e in entityReferences]}
+        print(payload)
+
         try:
             response = self.__session.post(
                 f"{self.__settings[ayon.SERVER_URL_KEY]}/api/resolve",
-                json={"uris": entityReferences})
+                json=payload)
 
         except requests.exceptions.RequestException as err:
             raise PluginError("Failed to connect to AYON server") from err
@@ -103,11 +117,17 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
             raise PluginError(f"AYON server returned an error - {response.status_code} - {response.text}")  # noqa: E501
 
         for idx, rep in enumerate(response.json()):
+            # if there are entities in response, we were able to resolve
+            # something.
             if rep["entities"]:
-                successCallback(idx, self.__dict_to_traits_data(rep["entities"][0]))
+                traits_data = TraitsData()
+                trait = mc_traits.content.LocatableContentTrait(traits_data)
+                trait.setLocation(rep["entities"][0]["path"])
+                successCallback(idx, traits_data)
             else:
-                errorCallback(idx, MalformedEntityReference(entityReferences[idx]))
-                raise MalformedEntityReference(entityReferences[idx])
+                errorCallback(idx, BatchElementError(
+                    BatchElementError.ErrorCode.kEntityResolutionError,
+                    f"Entity not found"))
 
     def preflight(
         self, targetEntityRefs, traitSet, context, hostSession, successCallback, errorCallback
