@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import os
 from typing import Any, List, Set
+import platform
 
 from . import ayon_traits
 import openassetio
@@ -32,6 +35,25 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
         self.__settings = ayon.make_default_settings()
         self.__session = requests.Session()
         self.__session.headers.update({'x-api-key': self.__settings[ayon.SERVER_API_KEY]})
+        self.__session.headers.update({'x-ayon-site-id': self._get_site_id()})
+
+    def _get_site_id(self) -> str:
+        """Returns the AYON site id for the current session.
+
+        The combination of hostname and platform is enough to determine the
+        site id.
+
+        Returns:
+            str: The site id for the current session.
+        """
+        hostname = platform.node()
+        system_platform = platform.system()
+
+        response = self.__session.get((
+            f"{self.__settings[ayon.SERVER_URL_KEY]}/api/system/sites?"
+            f"hostname={hostname}&platform={system_platform.lower()}")
+        )
+        return response.json()[0]["id"]
 
     def identifier(self):
         return "io.ynput.ayon.openassetio.manager.interface"
@@ -54,6 +76,7 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
                 host_session.logger().Severity.kDebug, "debug message")
         """
         self.__settings.update(managerSettings)
+        self.__session.headers.update({'x-ayon-site-id': self._get_site_id()})
 
     def managementPolicy(self,
                          traitSets: List[Set[str]],
@@ -84,7 +107,6 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
             raise PluginError(f"AYON server returned an error - {response.status_code} - {response.text}")  # noqa: E501
 
         result = []
-        print(response.json())
         for rep in response.json():
             if rep["entities"]:
                 result.append(True)
@@ -95,15 +117,17 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
     def resolve(
         self, entityReferences, traitSet, context,
         hostSession, successCallback, errorCallback
-    ):
+    ) -> List[TraitsData] | None:
         # if there is no LocatableContentTrait (path), bail out.
         if mc_traits.content.LocatableContentTrait.kId not in traitSet:
             for idx in range(len(entityReferences)):
                 successCallback(idx, TraitsData())
             return
 
-        payload = {"uris": [str(e) for e in entityReferences]}
-        print(payload)
+        payload = {
+            "resolveRoots": True,
+            "uris": [str(e) for e in entityReferences]
+        }
 
         try:
             response = self.__session.post(
@@ -122,7 +146,7 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
             if rep["entities"]:
                 traits_data = TraitsData()
                 trait = mc_traits.content.LocatableContentTrait(traits_data)
-                trait.setLocation(rep["entities"][0]["path"])
+                trait.setLocation(rep["entities"][0]["filePath"])
                 successCallback(idx, traits_data)
             else:
                 errorCallback(idx, BatchElementError(
