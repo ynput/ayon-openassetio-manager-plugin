@@ -1,5 +1,6 @@
 import os
 from .conftest import ProjectInfo
+import openassetio_mediacreation.traits as mc_traits
 import openassetio
 
 
@@ -36,10 +37,20 @@ def test_entity_reference_exists(project, manager, printer):
     project: ProjectInfo
     result = manager.entityExists(
         [
-            f"ayon+entity://{project.project_name}/{project.folder.name}?product={project.product.name}&version={project.version.name}&representation={project.representation.name}",
-            f"ayon+entity://{project.project_name}/{project.folder.name}?product={project.product.name}&version={project.version.name}&representation=NOT_EXISTING",
+            (
+                f"ayon+entity://{project.project_name}/"
+                f"{project.folder.name}?product={project.product.name}&"
+                f"version={project.version.name}&"
+                f"representation={project.representation.name}"
+            ),
+            (
+                f"ayon+entity://{project.project_name}/"
+                f"{project.folder.name}?product={project.product.name}&"
+                f"version={project.version.name}&"
+                f"representation=NOT_EXISTING",
+            )
         ], None)
-    printer(result)
+
     assert result[0] is True
     assert result[1] is False
 
@@ -47,15 +58,25 @@ def test_entity_reference_exists(project, manager, printer):
 def test_resolve(project, manager, printer):
     project: ProjectInfo
     context = manager.createContext()
-    context.access = openassetio.hostApi.AccessMode.kRead
-    context.retention = openassetio.hostApi.RetentionMode.kTemporary
+    # context.access = openassetio.hostApi.AccessMode.kRead
+    # context.retention = openassetio.hostApi.RetentionMode.kTemporary
 
-    result = manager.resolve(
-        [
-            f"ayon+entity://{project.project_name}/{project.folder.name}?product={project.product.name}&version={project.version.name}&representation={project.representation.name}",
+    result = manager.resolve(entityReferences=[
+            openassetio.EntityReference(
+                (
+                    f"ayon+entity://{project.project_name}/"
+                    f"{project.folder.name}?product={project.product.name}&"
+                    f"version={project.version.name}&"
+                    f"representation={project.representation.name}"
+                )),
         ],
+        traitSet={mc_traits.content.LocatableContentTrait.kId},
         context=context)
-    # {project[code]}_{folder[name]}_{product[name]}_v{version:0>3}<_{output}><.{frame:0>4}><_{udim}>.{ext}"
-    assert result[0] == f"C:/projects/{project.project_name}/{project.folder.name}/publish/render/"\
-                        f"{project.product.name}/{project.version.name}/"\
-                        f"{project.project_code}_{project.folder.name}_{project.product.name}_{project.version.name}.exr"
+
+    assert result[0] == (
+        f"C:/projects/{project.project_name}/"
+        f"{project.folder.name}/publish/render/"
+        f"{project.product.name}/{project.version.name}/"
+        f"{project.project_code}_{project.folder.name}_"
+        f"{project.product.name}_{project.version.name}.exr"
+    )

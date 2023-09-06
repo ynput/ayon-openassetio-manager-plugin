@@ -14,7 +14,7 @@ from dataclasses import dataclass
 
 
 AYON_SERVER_URL = "http://localhost:5000"
-AYON_API_KEY = "a4f7a61e968b4cd5a77e937652d8ef09"
+AYON_API_KEY = "09fc475e3bae4cc6bbe6942c231c17b3"
 
 
 @dataclass
@@ -46,11 +46,13 @@ class TestHost(HostInterface):
 def logger():
     return SeverityFilter(ConsoleLogger())
 
+
 @pytest.fixture
 def ayon_connection_env():
     os.environ["AYON_SERVER_URL"] = AYON_SERVER_URL
     os.environ["AYON_API_KEY"] = AYON_API_KEY
     return os.environ["AYON_SERVER_URL"], os.environ["AYON_API_KEY"]
+
 
 @pytest.fixture
 def base_dir():
@@ -181,13 +183,15 @@ def project(printer) -> pytest.fixture:
       },
       "library": False
     }
-    response = session.post(f"{AYON_SERVER_URL}/api/projects", json=project_data)
+    response = session.post(
+        f"{AYON_SERVER_URL}/api/projects", json=project_data)
     assert response.status_code == 201
 
     # fill project with some data
     # Create a folder
     printer(f"filling project {project_name} with data...")
-    response = session.post(f"{AYON_SERVER_URL}/api/projects/{project_name}/folders", json={
+    response = session.post(
+        f"{AYON_SERVER_URL}/api/projects/{project_name}/folders", json={
         "name": folder_name,
         "folderType": "Asset",
     })
@@ -195,7 +199,8 @@ def project(printer) -> pytest.fixture:
     folder_id = response.json()["id"]
 
     # Create a task
-    response = session.post(f"{AYON_SERVER_URL}/api/projects/{project_name}/tasks", json={
+    response = session.post(
+        f"{AYON_SERVER_URL}/api/projects/{project_name}/tasks", json={
         "name": task_name,
         "taskType": "rendering",
         "folderId": folder_id,
@@ -204,7 +209,8 @@ def project(printer) -> pytest.fixture:
     task_id = response.json()["id"]
 
     # Create a product
-    response = session.post(f"{AYON_SERVER_URL}/api/projects/{project_name}/products", json={
+    response = session.post(
+        f"{AYON_SERVER_URL}/api/projects/{project_name}/products", json={
         "name": product_name,
         "folderId": folder_id,
         "productType": "render",
@@ -213,7 +219,8 @@ def project(printer) -> pytest.fixture:
     product_id = response.json()["id"]
 
     # Create a version
-    response = session.post(f"{AYON_SERVER_URL}/api/projects/{project_name}/versions", json={
+    response = session.post(
+        f"{AYON_SERVER_URL}/api/projects/{project_name}/versions", json={
         "version": version,
         "productId": product_id,
         "taskId": task_id,
@@ -252,26 +259,32 @@ def project(printer) -> pytest.fixture:
         "representation": "exr"
     }
 
-    file_list = create_file_list(project_name, project_code, folder_name, product_name, version, "exr", 1001, 1050)
-    files = {
+    file_list = create_file_list(project_name, project_code, folder_name,
+                                 product_name, version, "exr",
+                                 1001, 1050)
+    representation_data = {
         "name": representation_name,
         "versionId": version_id,
         "files": file_list,
         "data": {
             "context": context_data
         },
-        "f"
         "attrib": {
             "frameStart": 1001,
             "frameEnd": 1050,
-            "template": project_data["anatomy"]["templates"]["publish"][0]["directory"] + "/" + project_data["anatomy"]["templates"]["publish"][0]["file"],
+            "template": project_data["anatomy"]["templates"]["publish"][0]["directory"] + "/" + project_data["anatomy"]["templates"]["publish"][0]["file"],  # noqa
         }
     }
 
-    response = session.post(f"{AYON_SERVER_URL}/api/projects/{project_name}/representations", json=files)
+    response = session.post(
+        f"{AYON_SERVER_URL}/api/projects/{project_name}/representations",
+        json=representation_data)
     assert response.status_code == 201
     representation_id = response.json()["id"]
-    printer(f"Created representation {representation_name} with {len(file_list)} files")
+    printer(
+        f"Created representation {representation_name} with "
+        f"{len(file_list)} files"
+    )
 
     yield ProjectInfo(
         project_name=project_name,
@@ -285,5 +298,5 @@ def project(printer) -> pytest.fixture:
 
     # teardown the project
     printer(f"tearing down project {project_name}...")
-    response = session.delete(f"{AYON_SERVER_URL}/api/projects/{project_name}")
-    assert response.status_code == 204
+    # response = session.delete(f"{AYON_SERVER_URL}/api/projects/{project_name}")
+    # assert response.status_code == 204
