@@ -13,10 +13,17 @@ commands as arguments, run it without arguments to see the list of available com
 * `generate-traits` - generates Python traits using openassetio-tratsgen from `traits.yml` file and puts them into `ayon_traits` module.
 * `run-tests` - runs test
 
+## Building
+
+You can build the plugin as Python wheel using Poetry. Run `poetry build` to build the wheel.
+It will be located in `dist` directory.
+
 ## Usage
 
 To use this plugin, make sure you point `OPENASSETIO_PLUGIN_PATH` environment variable to the directory where this plugin is located.
-Also make sure plugin Python environment is available inside the host. So far it needs only `requests` package and `openassetio` itself.
+You can use `OPENASSETIO_DEFAULT_CONFIG` pointing to `pyproject.toml` file to set default configuration for the plugin.
+
+Also make sure plugin Python environment is available inside the host. So far it needs only `requests`, `openassetio` and `openassetio_mediacreation`.
 To tell manager how to connect to AYON, set `AYON_SERVER_URL` environment variable to the server address and `AYON_API_KEY` to the API key.
 
 To get the correct formatted paths, you need to have AYON site id - unique identifier of your local site that can be determined from hostname
