@@ -1,19 +1,24 @@
 from __future__ import annotations
 
-import os
-from typing import Any, List, Set
 import platform
+from pathlib import Path
+from timeit import default_timer as timer
+# import os
+from typing import Any, List, Set
 
-from . import ayon_traits
+# from . import ayon_traits
 import openassetio
 import openassetio_mediacreation.traits as mc_traits
-from openassetio_mediacreation.traits.managementPolicy import ManagedTrait
 import requests
 from openassetio import (
-    BatchElementError, EntityReference, TraitsData, constants)
-from openassetio.exceptions import MalformedEntityReference, PluginError
-from openassetio.hostApi import Manager
+    BatchElementError,
+    EntityReference,
+    TraitsData,
+    constants
+)
+from openassetio.exceptions import PluginError
 from openassetio.managerApi import ManagerInterface
+from openassetio_mediacreation.traits.managementPolicy import ManagedTrait
 
 from . import ayon
 
@@ -69,13 +74,10 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
         return self.__settings.copy()
 
     def initialize(self, managerSettings, hostSession) -> None:
-        ayon.validate_settings(managerSettings)
-
-        """
-        host_session.logger().log(
-                host_session.logger().Severity.kDebug, "debug message")
-        """
         self.__settings.update(managerSettings)
+        ayon.validate_settings(self.__settings)
+
+        # add headers with the site id to the session
         self.__session.headers.update({'x-ayon-site-id': self._get_site_id()})
 
     def managementPolicy(self,
@@ -96,9 +98,13 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
 
     def entityExists(self, entityRefs, context, hostSession):
         try:
+            start = timer()
             response = self.__session.post(
                 f"{self.__settings[ayon.SERVER_URL_KEY]}/api/resolve",
                 json={"uris": entityRefs})
+            end = timer()
+            hostSession.logger().debug(
+                f"entityExists took {end - start} seconds.")
 
         except requests.exceptions.RequestException as err:
             raise PluginError("Failed to connect to AYON server") from err
@@ -120,6 +126,7 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
     ) -> List[TraitsData] | None:
         # if there is no LocatableContentTrait (path), bail out.
         if mc_traits.content.LocatableContentTrait.kId not in traitSet:
+            hostSession.logger().debug("no locatable content trait")
             for idx in range(len(entityReferences)):
                 successCallback(idx, TraitsData())
             return
@@ -130,9 +137,13 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
         }
 
         try:
+            start = timer()
             response = self.__session.post(
                 f"{self.__settings[ayon.SERVER_URL_KEY]}/api/resolve",
                 json=payload)
+            end = timer()
+            hostSession.logger().debug(
+                f"resolve request took {end - start} seconds.")
 
         except requests.exceptions.RequestException as err:
             raise PluginError("Failed to connect to AYON server") from err
@@ -146,12 +157,14 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
             if rep["entities"]:
                 traits_data = TraitsData()
                 trait = mc_traits.content.LocatableContentTrait(traits_data)
-                trait.setLocation(rep["entities"][0]["filePath"])
+                resolved_uri = Path(rep["entities"][0]["filePath"]).as_uri()
+                trait.setLocation(resolved_uri)
+                hostSession.logger().debug(f"location: {resolved_uri}")
                 successCallback(idx, traits_data)
             else:
                 errorCallback(idx, BatchElementError(
                     BatchElementError.ErrorCode.kEntityResolutionError,
-                    f"Entity not found"))
+                    "Entity not found"))
 
     def preflight(
         self, targetEntityRefs, traitSet, context, hostSession, successCallback, errorCallback

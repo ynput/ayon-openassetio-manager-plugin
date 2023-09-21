@@ -1,12 +1,8 @@
-import copy
-import json
 import os
 import re
-import string
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Set, Union
+from typing import Any, Dict, List, Set, Union
 from urllib.parse import parse_qs, urlparse
-
 
 NAME_REGEX = r"^[a-zA-Z0-9_][a-zA-Z0-9_\.\-]*[a-zA-Z0-9_]$"
 SERVER_URL_KEY = "AYON_SERVER_URL"
@@ -16,7 +12,6 @@ SERVER_API_KEY = "AYON_API_KEY"
 @dataclass
 class EntityInfo:
     """Identifies an AYON product."""
-
 
     uri: str
     project_name: str
