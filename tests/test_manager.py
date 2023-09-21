@@ -1,7 +1,11 @@
 import os
-from .conftest import ProjectInfo
-import openassetio_mediacreation.traits as mc_traits
+from pathlib import Path
+
 import openassetio
+import openassetio_mediacreation.traits as mc_traits
+from openassetio.access import ResolveAccess, PolicyAccess
+
+from .conftest import ProjectInfo
 
 
 def test_manager_discovery(plugin_path_env, manager_factory, printer):
@@ -69,16 +73,17 @@ def test_resolve(project, manager):
                 )),
         ],
         traitSet={mc_traits.content.LocatableContentTrait.kId},
+        resolveAccess=ResolveAccess.kRead,
         context=context)
 
     # result: List[openassetio.TraitsData]
     assert result[0].hasTrait(mc_traits.content.LocatableContentTrait.kId)
     assert result[0].getTraitProperty(
         mc_traits.content.LocatableContentTrait.kId,
-        "location") == os.path.normpath(
+        "location") == Path(
             f"C:/projects/{project.project_name}/"
             f"{project.folder.name}/publish/render/"
             f"{project.product.name}/{project.version.name}/"
             f"{project.project_code}_{project.folder.name}_"
             f"{project.product.name}_{project.version.name}.exr"
-        )
+        ).as_uri()

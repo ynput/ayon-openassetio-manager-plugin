@@ -19,6 +19,7 @@ from openassetio import (
 from openassetio.exceptions import PluginError
 from openassetio.managerApi import ManagerInterface
 from openassetio_mediacreation.traits.managementPolicy import ManagedTrait
+from openassetio.access import ResolveAccess, PolicyAccess
 
 from . import ayon
 
@@ -82,6 +83,7 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
 
     def managementPolicy(self,
                          traitSets: List[Set[str]],
+                         access,
                          context: openassetio.Context,
                          hostSession: openassetio.managerApi.HostSession) -> List[openassetio.TraitsData]:  # noqa: E501,N802, N803
         policies = []
@@ -121,8 +123,13 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
         return result
 
     def resolve(
-        self, entityReferences, traitSet, context,
-        hostSession, successCallback, errorCallback
+        self, entityReferences: List[openassetio._openassetio.EntityReference],
+            traitSet: Set[str],
+            resolveAccess,
+            context,
+            hostSession,
+            successCallback,
+            errorCallback
     ) -> List[TraitsData] | None:
         # if there is no LocatableContentTrait (path), bail out.
         if mc_traits.content.LocatableContentTrait.kId not in traitSet:
@@ -167,7 +174,8 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
                     "Entity not found"))
 
     def preflight(
-        self, targetEntityRefs, traitSet, context, hostSession, successCallback, errorCallback
+        self, targetEntityRefs, traitsDatas, access,
+        context,hostSession, successCallback, errorCallback
     ):
         raise NotImplementedError("preflight is not supported")
 
