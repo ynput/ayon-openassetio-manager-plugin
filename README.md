@@ -1,8 +1,16 @@
 # AYON OpenAssetIO Manager Plugin
 
 This is implementing manager interface for [OpenAssetIO](https://github.com/OpenAssetIO/OpenAssetIO). With it,
-any OpenAssetIO enabled host (DCC) can be used to load data from [AYON](https://ayon.ynput.io/). This is a work in progress and it depends on
-OpenAssetIO Traits to be supported by the host.
+any OpenAssetIO enabled host (DCC) can be used to load data from [AYON](https://ayon.ynput.io/). This is a work in
+progress, and it depends on OpenAssetIO Traits to be supported by the host. Once up adn running, OpenAssetIO host should
+understand AYON URIs in a form of 
+```
+ayon+entity://{project}/{asset}?product={product}&version={version}&representation={representation}
+```
+like
+```
+ayon+entity://TestProject/assets/Alice?product=modelMain&version=v002&representation=abc
+```
 
 ## Installation
 
