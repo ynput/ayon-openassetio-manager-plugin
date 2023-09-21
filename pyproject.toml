@@ -5,7 +5,8 @@ requires-pythonpython = ">=3.9.1"
 # this is now using unlocked version until everything stabilizes
 dependencies = [
     "requests",
-    "openassetio"
+    "openassetio",
+    "openassetio-mediacreation",
 ]
 authors = [
     { name="AYON Team", email = "info@ynput.io" }
@@ -40,6 +41,7 @@ packages = [
 python = ">=3.9.1"
 requests = "*"
 openassetio= "*"
+openassetio-mediacreation = "*"
 
 [tool.poetry.group.dev.dependencies]
 openassetio-traitgen = "*"
@@ -51,6 +53,10 @@ isort = "*"
 pytest = "*"
 pytest-print = "*"
 
+[tool.poetry.plugins] # Optional super table
+[tool.poetry.plugins."openassetio.manager_plugin"]
+plugin_package_or_module = "AyonOpenAssetIOManager"
+
 [tool.poetry.urls]
 "Bug Tracker" = "https://github.com/ynput/ayon-openassetio-manager-plugin/issues"
 "Discussions" = "https://community.ynput.io/"
@@ -58,3 +64,6 @@ pytest-print = "*"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[manager]
+identifier = "io.ynput.ayon.openassetio.manager"
