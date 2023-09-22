@@ -1,4 +1,5 @@
-# AYON OpenAssetIO Manager Plugin
+AYON OpenAssetIO Manager Plugin
+===============================
 
 This is implementing manager interface for [OpenAssetIO](https://github.com/OpenAssetIO/OpenAssetIO). With it,
 any OpenAssetIO enabled host (DCC) can be used to load data from [AYON](https://ayon.ynput.io/). This is a work in
@@ -12,7 +13,8 @@ like
 ayon+entity://TestProject/assets/Alice?product=modelMain&version=v002&representation=abc
 ```
 
-## Installation
+Installation
+------------
 
 To manage your installation, use `./tools/manage.ps1` on Windows and `./tools/manage.sh` on Linux and macOS. It accepts
 commands as arguments, run it without arguments to see the list of available commands.
@@ -21,12 +23,14 @@ commands as arguments, run it without arguments to see the list of available com
 * `generate-traits` - generates Python traits using openassetio-tratsgen from `traits.yml` file and puts them into `ayon_traits` module.
 * `run-tests` - runs test
 
-## Building
+Building
+--------
 
 You can build the plugin as Python wheel using Poetry. Run `poetry build` to build the wheel.
 It will be located in `dist` directory.
 
-## Usage
+Usage
+-----
 
 To use this plugin, make sure you point `OPENASSETIO_PLUGIN_PATH` environment variable to the directory where this plugin is located.
 You can use `OPENASSETIO_DEFAULT_CONFIG` pointing to `pyproject.toml` file to set default configuration for the plugin.
@@ -39,11 +43,12 @@ and platform. Server can determine your site id from that and use it for all sub
 you first run AYON launcher and connect it to the server. In other words, you need to run AYON launcher at least once to get correct results.
 This needs to be handled later on more gracefully.
 
-## Development
+Development
+-----------
 
 To run tests, you need to configure your AYON server in `tests/conftest.py` file. Set `AYON_SERVER_URL` and `AYON_API_KEY` at the top of the file.
 
-### TODO:
+**TODO:**
 
 - [ ] Handle site id determination more gracefully
 - [ ] Better error handling
