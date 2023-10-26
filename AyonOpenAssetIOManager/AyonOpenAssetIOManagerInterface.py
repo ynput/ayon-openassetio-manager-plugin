@@ -13,10 +13,11 @@ import requests
 from openassetio import (
     BatchElementError,
     EntityReference,
+    TraitsData,
     access,
     constants
 )
-from openassetio.trait import TraitsData
+from openassetio.exceptions import PluginError
 from openassetio.managerApi import ManagerInterface
 from openassetio_mediacreation.traits.managementPolicy import ManagedTrait
 
@@ -34,15 +35,6 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
     """
 
     __reference_prefix = "ayon+entity://"
-
-    __supported_capabilities = (
-        # The following two capabilities are required. See docs for why
-        # these need to be advertised (TLDR: future-proofing).
-        ManagerInterface.Capability.kEntityReferenceIdentification,
-        ManagerInterface.Capability.kManagementPolicyQueries,
-        # Optional supported capabilities.
-        ManagerInterface.Capability.kExistenceQueries,
-        ManagerInterface.Capability.kResolution)
 
     def __init__(self):
         super().__init__()
@@ -90,7 +82,15 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
         self.__session.headers.update({'x-ayon-site-id': self._get_site_id()})
 
     def hasCapability(self, capability: ManagerInterface.Capability):
-        return capability in self.__supported_capabilities
+        supported_capabilities = (
+            # The following two capabilities are required. See docs for why
+            # these need to be advertised (TLDR: future-proofing).
+            ManagerInterface.Capability.kEntityReferenceIdentification,
+            ManagerInterface.Capability.kManagementPolicyQueries,
+            # Optional supported capabilities.
+            ManagerInterface.Capability.kExistenceQueries,
+            ManagerInterface.Capability.kResolution)
+        return capability in supported_capabilities
 
     def managementPolicy(self,
                          traitSets: List[Set[str]],
@@ -121,12 +121,10 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
                 f"entityExists took {end - start} seconds.")
 
         except requests.exceptions.RequestException as err:
-            raise errors.OpenAssetIOException("Failed to connect to AYON server") from err
+            raise PluginError("Failed to connect to AYON server") from err
 
         if response.status_code != 200:
-            raise errors.OpenAssetIOException(
-                f"AYON server returned an error - {response.status_code} - {response.text}"
-            )
+            raise PluginError(f"AYON server returned an error - {response.status_code} - {response.text}")  # noqa: E501
 
         for idx, rep in enumerate(response.json()):
             if rep["entities"]:
@@ -171,12 +169,10 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
                 f"resolve request took {end - start} seconds.")
 
         except requests.exceptions.RequestException as err:
-            raise errors.OpenAssetIOException("Failed to connect to AYON server") from err
+            raise PluginError("Failed to connect to AYON server") from err
 
         if response.status_code != 200:
-            raise errors.OpenAssetIOException(
-                f"AYON server returned an error - {response.status_code} - {response.text}"
-            )
+            raise PluginError(f"AYON server returned an error - {response.status_code} - {response.text}")  # noqa: E501
 
         for idx, rep in enumerate(response.json()):
             # if there are entities in response, we were able to resolve
@@ -192,6 +188,84 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
                 errorCallback(idx, BatchElementError(
                     BatchElementError.ErrorCode.kEntityResolutionError,
                     "Entity not found"))
+
+    def preflight(
+        self,
+        targetEntityRefs,
+        traitsHints,
+        publishingAccess,
+        context,
+        hostSession,
+        successCallback,
+        errorCallback
+    ):
+        raise NotImplementedError("preflight is not supported")
+
+    def register(
+        self,
+        targetEntityRefs,
+        entityTraitsDatas,
+        publishingAccess,
+        context,
+        hostSession,
+        successCallback,
+        errorCallback,
+    ):
+        raise NotImplementedError("Registering entities is not supported")
+
+    def getWithRelationship(
+        self,
+        entityReferences,
+        relationshipTraitsData,
+        resultTraitSet,
+        relationsAccess,
+        context,
+        hostSession,
+        successCallback,
+        errorCallback,
+    ):
+        raise NotImplementedError("getWithRelationship is not supported")
+
+    def getWithRelationships(
+        self,
+        entityReference,
+        relationshipTraitsDatas,
+        resultTraitSet,
+        relationsAccess,
+        context,
+        hostSession,
+        successCallback,
+        errorCallback,
+    ):
+        raise NotImplementedError("getWithRelationships is not supported")
+
+    def getWithRelationshipPaged(
+            self,
+            entityReferences,
+            relationshipTraitsData,
+            resultTraitSet,
+            pageSize,
+            relationsAccess,
+            context,
+            hostSession,
+            successCallback,
+            errorCallback,
+    ):
+        raise NotImplementedError("getWithRelationship is not supported")
+
+    def getWithRelationshipsPaged(
+            self,
+            entityReference,
+            relationshipTraitsDatas,
+            resultTraitSet,
+            pageSize,
+            relationsAccess,
+            context,
+            hostSession,
+            successCallback,
+            errorCallback,
+    ):
+        raise NotImplementedError("getWithRelationships is not supported")
 
     def __build_entity_ref(
             self, entity_info: ayon.EntityInfo) -> EntityReference:
