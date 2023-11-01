@@ -24,6 +24,26 @@ and platform. Server can determine your site id from that and use it for all sub
 you first run AYON launcher and connect it to the server. In other words, you need to run AYON launcher at least once to get correct results.
 This needs to be handled later on more gracefully.
 
+### Tech Preview: Setup for Nuke 15
+
+Nuke 15 comes with OpenAssetIO support out of the box in a state of tech-preview. To use it, you need to
+set `OPENASSETIO_PLUGIN_PATH` environment variable to the location of this repository. You also need to add at least
+`requests` module to your Python environment - you can do that by running `./tools/manage.ps1 create-env` on Windows
+and then `$env:PYTHONPATH="$env:PYTHONPATH;$(pwd)/.venv/Lib/site-packages"` in PowerShell. Set your `AYON_SERVER_URL` and `AYON_API_KEY`
+and `OPENASSETIO_DEFAULT_CONFIG` like `$env:OPENASSETIO_DEFAULT_CONFIG="$env:OPENASSETIO_DEFAULT_CONFIG;$(pwd)/pyproject.toml`.
+Then you can run Nuke and use OpenAssetIO:
+
+```powershell
+$env:OPENASSETIO_PLUGIN_PATH=$(pwd)
+$env:OPENASSETIO_DEFAULT_CONFIG="$(pwd)/pyproject.toml"
+$env:AYON_SERVER_URL="https://your.ayon.instance"
+$env:AYON_API_KEY="your-api-key"
+$enc:PYTHONPATH="$($env:PYTHONPATH);$(pwd)/.venv/Lib/site-packages"
+& 'C:\Program Files\Nuke15.0v1\Nuke15.0.exe'
+```
+
+More information about OpenAssetIO in Nuke can be found in [Nuke documentation](https://learn.foundry.com/nuke/developers/150/pythondevguide/openassetio.html).
+
 ## Development
 
 To run tests, you need to configure your AYON server in `tests/conftest.py` file. Set `AYON_SERVER_URL` and `AYON_API_KEY` at the top of the file.
