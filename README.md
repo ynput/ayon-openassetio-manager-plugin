@@ -38,7 +38,7 @@ $env:OPENASSETIO_PLUGIN_PATH=$(pwd)
 $env:OPENASSETIO_DEFAULT_CONFIG="$(pwd)/pyproject.toml"
 $env:AYON_SERVER_URL="https://your.ayon.instance"
 $env:AYON_API_KEY="your-api-key"
-$enc:PYTHONPATH="$($env:PYTHONPATH);$(pwd)/.venv/Lib/site-packages"
+$env:PYTHONPATH="$($env:PYTHONPATH);$(pwd)/.venv/Lib/site-packages"
 & 'C:\Program Files\Nuke15.0v1\Nuke15.0.exe'
 ```
 
