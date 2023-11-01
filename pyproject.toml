@@ -1,7 +1,7 @@
 [project]
 name = "AYON OpenAssetIO Manager Plugin"
 version = "0.1.0"
-requires-pythonpython = ">=3.9.1"
+requires-python = ">=3.9.1"
 # this is now using unlocked version until everything stabilizes
 dependencies = [
     "requests",
