@@ -14,6 +14,7 @@ from openassetio import (
     BatchElementError,
     EntityReference,
     TraitsData,
+    access,
     constants
 )
 from openassetio.exceptions import PluginError
@@ -80,14 +81,27 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
         # add headers with the site id to the session
         self.__session.headers.update({'x-ayon-site-id': self._get_site_id()})
 
+    def hasCapability(self, capability: ManagerInterface.Capability):
+        supported_capabilities = (
+            # The following two capabilities are required. See docs for why
+            # these need to be advertised (TLDR: future-proofing).
+            ManagerInterface.Capability.kEntityReferenceIdentification,
+            ManagerInterface.Capability.kManagementPolicyQueries,
+            # Optional supported capabilities.
+            ManagerInterface.Capability.kExistenceQueries,
+            ManagerInterface.Capability.kResolution)
+        return capability in supported_capabilities
+
     def managementPolicy(self,
                          traitSets: List[Set[str]],
+                         policyAccess: access.PolicyAccess,
                          context: openassetio.Context,
-                         hostSession: openassetio.managerApi.HostSession) -> List[openassetio.TraitsData]:  # noqa: E501,N802, N803
+                         hostSession: openassetio.managerApi.HostSession) -> List[TraitsData]:  # noqa: E501,N802, N803
         policies = []
         for trait_set in traitSets:
             traits_data = TraitsData()
-            if context.isForRead() and mc_traits.content.LocatableContentTrait.kId in trait_set:  # noqa: E501
+            if (policyAccess == access.PolicyAccess.kRead and
+                    mc_traits.content.LocatableContentTrait.kId in trait_set):  # noqa: E501
                 ManagedTrait.imbueTo(traits_data)
                 mc_traits.content.LocatableContentTrait.imbueTo(traits_data)
             policies.append(traits_data)
@@ -96,12 +110,12 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
     def isEntityReferenceString(self, some_string, host_session):
         return some_string.startswith(self.__reference_prefix)
 
-    def entityExists(self, entityRefs, context, hostSession):
+    def entityExists(self, entityRefs, context, hostSession, successCallback, errorCallback):
         try:
             start = timer()
             response = self.__session.post(
                 f"{self.__settings[ayon.SERVER_URL_KEY]}/api/resolve",
-                json={"uris": entityRefs})
+                json={"uris": [str(ref) for ref in entityRefs]})
             end = timer()
             hostSession.logger().debug(
                 f"entityExists took {end - start} seconds.")
@@ -112,18 +126,27 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
         if response.status_code != 200:
             raise PluginError(f"AYON server returned an error - {response.status_code} - {response.text}")  # noqa: E501
 
-        result = []
-        for rep in response.json():
+        for idx, rep in enumerate(response.json()):
             if rep["entities"]:
-                result.append(True)
+                successCallback(idx, True)
             else:
-                result.append(False)
-        return result
+                successCallback(idx, False)
 
     def resolve(
-        self, entityReferences, traitSet, context,
+        self, entityReferences, traitSet, resolveAccess, context,
         hostSession, successCallback, errorCallback
     ) -> List[TraitsData] | None:
+
+        # Only support resolve for read, since we don't support
+        # publishing yet.
+        if resolveAccess != access.ResolveAccess.kRead:
+            for idx in range(len(entityReferences)):
+                errorCallback(
+                    idx, BatchElementError(
+                        BatchElementError.ErrorCode.kEntityAccessError,
+                        "Resolve for write is not yet supported"))
+            return
+
         # if there is no LocatableContentTrait (path), bail out.
         if mc_traits.content.LocatableContentTrait.kId not in traitSet:
             hostSession.logger().debug("no locatable content trait")
@@ -167,7 +190,14 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
                     "Entity not found"))
 
     def preflight(
-        self, targetEntityRefs, traitSet, context, hostSession, successCallback, errorCallback
+        self,
+        targetEntityRefs,
+        traitsHints,
+        publishingAccess,
+        context,
+        hostSession,
+        successCallback,
+        errorCallback
     ):
         raise NotImplementedError("preflight is not supported")
 
@@ -175,6 +205,7 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
         self,
         targetEntityRefs,
         entityTraitsDatas,
+        publishingAccess,
         context,
         hostSession,
         successCallback,
@@ -187,6 +218,7 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
         entityReferences,
         relationshipTraitsData,
         resultTraitSet,
+        relationsAccess,
         context,
         hostSession,
         successCallback,
@@ -199,6 +231,7 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
         entityReference,
         relationshipTraitsDatas,
         resultTraitSet,
+        relationsAccess,
         context,
         hostSession,
         successCallback,
@@ -206,9 +239,33 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
     ):
         raise NotImplementedError("getWithRelationships is not supported")
 
-    def getRelatedReferences(self, entityRefs, relationshipTraitsDatas,
-                             context, hostSession, resultTraitSet=None):
-        raise NotImplementedError("getRelatedReferences is not supported")
+    def getWithRelationshipPaged(
+            self,
+            entityReferences,
+            relationshipTraitsData,
+            resultTraitSet,
+            pageSize,
+            relationsAccess,
+            context,
+            hostSession,
+            successCallback,
+            errorCallback,
+    ):
+        raise NotImplementedError("getWithRelationship is not supported")
+
+    def getWithRelationshipsPaged(
+            self,
+            entityReference,
+            relationshipTraitsDatas,
+            resultTraitSet,
+            pageSize,
+            relationsAccess,
+            context,
+            hostSession,
+            successCallback,
+            errorCallback,
+    ):
+        raise NotImplementedError("getWithRelationships is not supported")
 
     def __build_entity_ref(
             self, entity_info: ayon.EntityInfo) -> EntityReference:

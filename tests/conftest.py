@@ -27,6 +27,7 @@ class IdNamePair(object):
 class ProjectInfo(object):
     project_name: str
     project_code: str
+    project_root_folders: dict[str, str]
     folder: IdNamePair
     task: IdNamePair
     product: IdNamePair
@@ -49,8 +50,8 @@ def logger():
 
 @pytest.fixture
 def ayon_connection_env():
-    os.environ["AYON_SERVER_URL"] = AYON_SERVER_URL
-    os.environ["AYON_API_KEY"] = AYON_API_KEY
+    os.environ["AYON_SERVER_URL"] = os.environ.get("AYON_SERVER_URL", AYON_SERVER_URL)
+    os.environ["AYON_API_KEY"] = os.environ.get("AYON_API_KEY", AYON_API_KEY)
     return os.environ["AYON_SERVER_URL"], os.environ["AYON_API_KEY"]
 
 
@@ -85,7 +86,8 @@ def manager(plugin_path_env, ayon_connection_env, host, manager_factory, logger)
 
 
 @pytest.fixture
-def project(printer) -> pytest.fixture:
+def project(printer, ayon_connection_env) -> pytest.fixture:
+    server_url, api_key = ayon_connection_env
     _token = secrets.token_hex(5)
     project_name = f"{_token}_test_project"
     project_code = f"TP_{_token[:3]}"
@@ -97,7 +99,7 @@ def project(printer) -> pytest.fixture:
 
     printer(f"creating project {project_name}...")
     session = requests.Session()
-    session.headers.update({'x-api-key': AYON_API_KEY})
+    session.headers.update({'x-api-key': api_key})
 
     project_data = {
       "name": project_name,
@@ -184,14 +186,14 @@ def project(printer) -> pytest.fixture:
       "library": False
     }
     response = session.post(
-        f"{AYON_SERVER_URL}/api/projects", json=project_data)
+        f"{server_url}/api/projects", json=project_data)
     assert response.status_code == 201
 
     # fill project with some data
     # Create a folder
     printer(f"filling project {project_name} with data...")
     response = session.post(
-        f"{AYON_SERVER_URL}/api/projects/{project_name}/folders", json={
+        f"{server_url}/api/projects/{project_name}/folders", json={
         "name": folder_name,
         "folderType": "Asset",
     })
@@ -200,7 +202,7 @@ def project(printer) -> pytest.fixture:
 
     # Create a task
     response = session.post(
-        f"{AYON_SERVER_URL}/api/projects/{project_name}/tasks", json={
+        f"{server_url}/api/projects/{project_name}/tasks", json={
             "name": task_name,
             "taskType": "rendering",
             "folderId": folder_id,
@@ -210,7 +212,7 @@ def project(printer) -> pytest.fixture:
 
     # Create a product
     response = session.post(
-        f"{AYON_SERVER_URL}/api/projects/{project_name}/products", json={
+        f"{server_url}/api/projects/{project_name}/products", json={
         "name": product_name,
         "folderId": folder_id,
         "productType": "render",
@@ -220,7 +222,7 @@ def project(printer) -> pytest.fixture:
 
     # Create a version
     response = session.post(
-        f"{AYON_SERVER_URL}/api/projects/{project_name}/versions", json={
+        f"{server_url}/api/projects/{project_name}/versions", json={
         "version": version,
         "productId": product_id,
         "taskId": task_id,
@@ -277,7 +279,7 @@ def project(printer) -> pytest.fixture:
     }
 
     response = session.post(
-        f"{AYON_SERVER_URL}/api/projects/{project_name}/representations",
+        f"{server_url}/api/projects/{project_name}/representations",
         json=representation_data)
     assert response.status_code == 201
     representation_id = response.json()["id"]
@@ -289,6 +291,7 @@ def project(printer) -> pytest.fixture:
     yield ProjectInfo(
         project_name=project_name,
         project_code=project_code,
+        project_root_folders=project_data["anatomy"]["roots"][0],
         folder=IdNamePair(name=folder_name, id=folder_id),
         task=IdNamePair(name=task_name, id=task_id),
         product=IdNamePair(name=product_name, id=product_id),
@@ -300,5 +303,5 @@ def project(printer) -> pytest.fixture:
     # teardown the project
     printer(f"tearing down project {project_name}...")
     response = session.delete(
-        f"{AYON_SERVER_URL}/api/projects/{project_name}")
+        f"{server_url}/api/projects/{project_name}")
     assert response.status_code == 204
