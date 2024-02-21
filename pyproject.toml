@@ -1,6 +1,6 @@
 [project]
-name = "ayon-openassetio-manager-plugin"
-version = "0.1.2"
+name = "AYON OpenAssetIO Manager Plugin"
+version = "0.1.3"
 requires-python = ">=3.9.1"
 # this is now using unlocked version until everything stabilizes
 dependencies = [
@@ -9,22 +9,10 @@ dependencies = [
     "openassetio-mediacreation",
 ]
 authors = [
-    {name = "ynput.io", email = "info@ynput.io"}
+    { name="AYON Team", email = "info@ynput.io" }
 ]
-description = "AYON Manager Plugin for OpenAssetIO enabled hosts."
-keywords = [
-    "AYON", "OpenAssetIO", "asset", "vfx", "OpenPype",
-    "pipeline", "automation", "tracking", "asset management"]
-classifiers = [
-    "Development Status :: 4 - Beta",
-    "Environment :: Plugins",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "License :: OSI Approved :: Apache Software License",
-    "Operating System :: OS Independent",
-    "Topic :: Multimedia :: Graphics",
-]
-
+description = "AYON Manager Plugin for OpenAssetIO hosts."
+keywords = ["AYON", "OpenAssetIO", "asset", "automation", "tracking", "asset management"]
 readme = "README.md"
 homepage = "https://github.com/ynput/ayon-openassetio-manager-plugin"
 license = {file = "LICENSE", content-type = "text/plain"}
@@ -37,13 +25,18 @@ plugin_package_or_module = "AyonOpenAssetIOManager"
 
 [tool.poetry]
 name = "ayon-openassetio-manager-plugin"
-version = "0.1.2"
+version = "0.1.3"
 description = "AYON Manager Plugin for OpenAssetIO hosts."
-authors = [
-    "input.io <info@ynput.io>"
-]
+authors = ["AYON Team <info@ynput.io>"]
+license = "Apache-2.0"
+homepage = "https://github.com/ynput/ayon-openassetio-manager-plugin"
+documentation = "https://ayon.ynput.io/"
+repository = "https://github.com/ynput/ayon-openassetio-manager-plugin"
 readme = "README.md"
-
+keywords = ["AYON", "OpenAssetIO", "asset", "automation", "tracking", "asset management"]
+packages = [
+    {include = "AyonOpenAssetIOManager"},
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Plugins",
@@ -54,12 +47,11 @@ classifiers = [
     "Topic :: Multimedia :: Graphics",
 ]
 
-packages = [
-    {include = "AyonOpenAssetIOManager"},
+include = [
     {include = "LICENSE"},
     {include = "README.md"},
     {include = "pyproject.toml"},
-    {include = "poetry.lock"}
+    {include = "poetry.lock", format = ["sdist"]}
 ]
 
 [tool.poetry.dependencies]

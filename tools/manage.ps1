@@ -21,6 +21,9 @@ PS> .\manage.ps1 create-env --verbose
 $script_dir = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
 $repo_root = (Get-Item $script_dir).parent.FullName
 
+Write-Host "Script directory: $script_dir"
+Write-Host "Repo: $repo_root"
+
 if (-not (Test-Path 'env:POETRY_HOME')) {
     $env:POETRY_HOME = "$root\.poetry"
 }

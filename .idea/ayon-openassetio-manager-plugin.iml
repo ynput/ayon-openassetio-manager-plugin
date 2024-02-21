@@ -5,6 +5,7 @@
       <sourceFolder url="file://$MODULE_DIR$/AyonOpenAssetIOManager" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/stubs" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/AyonOpenAssetIOManager/ayon_traits" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/tests" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/.venv" />
       <excludeFolder url="file://$MODULE_DIR$/tests/.pytest_cache" />
     </content>
