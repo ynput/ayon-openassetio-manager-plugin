@@ -35,7 +35,7 @@ repository = "https://github.com/ynput/ayon-openassetio-manager-plugin"
 readme = "README.md"
 keywords = ["AYON", "OpenAssetIO", "asset", "automation", "tracking", "asset management"]
 packages = [
-    {include = "AyonOpenAssetIOManager"},
+    {include = "ayon_openassetio_manager"}
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -45,13 +45,6 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Topic :: Multimedia :: Graphics",
-]
-
-include = [
-    {include = "LICENSE"},
-    {include = "README.md"},
-    {include = "pyproject.toml"},
-    {include = "poetry.lock", format = ["sdist"]}
 ]
 
 [tool.poetry.dependencies]
@@ -72,7 +65,7 @@ pytest-print = "*"
 
 [tool.poetry.plugins] # Optional super table
 [tool.poetry.plugins."openassetio.manager_plugin"]
-plugin_package_or_module = "AyonOpenAssetIOManager"
+plugin_package_or_module = "ayon_openassetio_manager"
 
 [tool.poetry.urls]
 "Bug Tracker" = "https://github.com/ynput/ayon-openassetio-manager-plugin/issues"
@@ -81,6 +74,3 @@ plugin_package_or_module = "AyonOpenAssetIOManager"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
-
-[manager]
-identifier = "io.ynput.ayon.openassetio.manager"
