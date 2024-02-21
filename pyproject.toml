@@ -35,11 +35,7 @@ repository = "https://github.com/ynput/ayon-openassetio-manager-plugin"
 readme = "README.md"
 keywords = ["AYON", "OpenAssetIO", "asset", "automation", "tracking", "asset management"]
 packages = [
-    {include = "AyonOpenAssetIOManager"},
-    {include = "LICENSE"},
-    {include = "README.md"},
-    {include = "pyproject.toml"},
-    {include = "poetry.lock", format = ["sdist"]}
+    {include = "plugin/**/*"},
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
