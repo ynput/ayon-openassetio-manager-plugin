@@ -65,7 +65,7 @@ pytest-print = "*"
 
 [tool.poetry.plugins] # Optional super table
 [tool.poetry.plugins."openassetio.manager_plugin"]
-plugin_package_or_module = "AyonOpenAssetIOManager"
+plugin_package_or_module = "ayon_openassetio_manager"
 
 [tool.poetry.urls]
 "Bug Tracker" = "https://github.com/ynput/ayon-openassetio-manager-plugin/issues"
@@ -74,6 +74,3 @@ plugin_package_or_module = "AyonOpenAssetIOManager"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
-
-[manager]
-identifier = "io.ynput.ayon.openassetio.manager"

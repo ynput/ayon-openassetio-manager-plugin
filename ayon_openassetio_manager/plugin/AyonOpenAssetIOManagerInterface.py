@@ -93,6 +93,7 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
             # these need to be advertised (TLDR: future-proofing).
             ManagerInterface.Capability.kEntityReferenceIdentification,
             ManagerInterface.Capability.kManagementPolicyQueries,
+            ManagerInterface.Capability.kEntityTraitIntrospection,
             # Optional supported capabilities.
             ManagerInterface.Capability.kExistenceQueries,
             ManagerInterface.Capability.kResolution)
