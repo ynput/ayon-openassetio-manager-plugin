@@ -48,7 +48,7 @@ class Representation:
 def make_default_settings() -> dict:
     """Returns the default settings for the AYON plugin."""
     return {
-        SERVER_URL_KEY: os.getenv("AYON_SERVER_URL", "https://localhost:5000"),
+        SERVER_URL_KEY: os.getenv("AYON_SERVER_URL", "http://localhost:5000"),
         SERVER_API_KEY: os.getenv("AYON_API_KEY")
     }
 

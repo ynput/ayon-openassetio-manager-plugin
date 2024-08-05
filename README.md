@@ -13,6 +13,11 @@ commands as arguments, run it without arguments to see the list of available com
 * `generate-traits` - generates Python traits using openassetio-tratsgen from `traits.yml` file and puts them into `ayon_traits` module.
 * `run-tests` - runs test
 
+## Building
+
+You can build the plugin as Python wheel using Poetry. Run `poetry build` to build the wheel.
+It will be located in `dist` directory.
+
 ## Usage
 
 To use this plugin, make sure you point `OPENASSETIO_PLUGIN_PATH` environment variable to the directory where this plugin is located.

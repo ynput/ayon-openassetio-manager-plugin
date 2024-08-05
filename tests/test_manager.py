@@ -2,16 +2,18 @@ import operator
 import os
 import platform
 
-from .conftest import ProjectInfo
-import openassetio_mediacreation.traits as mc_traits
 import openassetio
 import openassetio.access
+import openassetio_mediacreation.traits as mc_traits
+
+from .conftest import ProjectInfo
 
 
 def test_manager_discovery(plugin_path_env, ayon_connection_env, manager_factory, printer):
     printer(
         "testing if plugin can be discovered "
         f"in {os.getenv('OPENASSETIO_PLUGIN_PATH')}")
+
     managers = manager_factory.availableManagers()
     assert "io.ynput.ayon.openassetio.manager" in managers.keys()
 

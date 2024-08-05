@@ -17,7 +17,7 @@ from openassetio import (
     access,
     constants
 )
-from openassetio.exceptions import PluginError
+from openassetio.errors import ConfigurationException
 from openassetio.managerApi import ManagerInterface
 from openassetio_mediacreation.traits.managementPolicy import ManagedTrait
 
@@ -27,6 +27,9 @@ __all__ = [
     "AyonOpenAssetIOManagerInterface",
 ]
 
+
+class ServerError(Exception):
+    pass
 
 class AyonOpenAssetIOManagerInterface(ManagerInterface):
     """
@@ -59,6 +62,9 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
             f"{self.__settings[ayon.SERVER_URL_KEY]}/api/system/sites?"
             f"hostname={hostname}&platform={system_platform.lower()}")
         )
+        if response.status_code != 200:
+            raise ServerError(f"AYON server returned an error - {response.status_code} - {response.text}")
+
         return response.json()[0]["id"]
 
     def identifier(self):
@@ -87,6 +93,7 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
             # these need to be advertised (TLDR: future-proofing).
             ManagerInterface.Capability.kEntityReferenceIdentification,
             ManagerInterface.Capability.kManagementPolicyQueries,
+            ManagerInterface.Capability.kEntityTraitIntrospection,
             # Optional supported capabilities.
             ManagerInterface.Capability.kExistenceQueries,
             ManagerInterface.Capability.kResolution)
@@ -121,10 +128,10 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
                 f"entityExists took {end - start} seconds.")
 
         except requests.exceptions.RequestException as err:
-            raise PluginError("Failed to connect to AYON server") from err
+            raise ServerError("Failed to connect to AYON server") from err
 
         if response.status_code != 200:
-            raise PluginError(f"AYON server returned an error - {response.status_code} - {response.text}")  # noqa: E501
+            raise ServerError(f"AYON server returned an error - {response.status_code} - {response.text}")  # noqa: E501
 
         for idx, rep in enumerate(response.json()):
             if rep["entities"]:
@@ -169,10 +176,10 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
                 f"resolve request took {end - start} seconds.")
 
         except requests.exceptions.RequestException as err:
-            raise PluginError("Failed to connect to AYON server") from err
+            raise ServerError("Failed to connect to AYON server") from err
 
         if response.status_code != 200:
-            raise PluginError(f"AYON server returned an error - {response.status_code} - {response.text}")  # noqa: E501
+            raise ServerError(f"AYON server returned an error - {response.status_code} - {response.text}")  # noqa: E501
 
         for idx, rep in enumerate(response.json()):
             # if there are entities in response, we were able to resolve
