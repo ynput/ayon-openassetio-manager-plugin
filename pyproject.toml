@@ -50,7 +50,7 @@ classifiers = [
 [tool.poetry.dependencies]
 python = ">=3.9.1"
 requests = "*"
-openassetio= "*"
+openassetio = "^1.0.0b2"
 openassetio-mediacreation = "*"
 
 [tool.poetry.group.dev.dependencies]
