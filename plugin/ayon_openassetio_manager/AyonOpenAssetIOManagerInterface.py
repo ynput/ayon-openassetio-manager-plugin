@@ -20,7 +20,7 @@ from openassetio import (
 from openassetio.managerApi import ManagerInterface
 from openassetio_mediacreation.traits.managementPolicy import ManagedTrait
 
-import ayon
+from . import ayon
 
 
 __all__ = [
@@ -75,7 +75,7 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
         return "AYON OpenAssetIO Manager"
 
     def info(self):
-        return {constants.kField_EntityReferencesMatchPrefix: self.__reference_prefix}  # noqa: E400
+        return {constants.kInfoKey_EntityReferencesMatchPrefix: self.__reference_prefix}  # noqa: E400
 
     def settings(self, host_session: Any) -> dict:
         return self.__settings.copy()
