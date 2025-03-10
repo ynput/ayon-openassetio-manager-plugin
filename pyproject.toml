@@ -71,3 +71,6 @@ pytest-print = "*"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[manager]
+identifier = "io.ynput.ayon.openassetio.manager"
