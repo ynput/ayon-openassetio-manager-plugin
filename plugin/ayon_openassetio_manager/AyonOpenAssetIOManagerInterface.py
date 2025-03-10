@@ -10,18 +10,18 @@ from typing import Any, List, Set
 import openassetio
 import openassetio_mediacreation.traits as mc_traits
 import requests
+from openassetio.trait import TraitsData
+from openassetio.errors import BatchElementError
 from openassetio import (
-    BatchElementError,
     EntityReference,
-    TraitsData,
     access,
     constants
 )
-from openassetio.errors import ConfigurationException
 from openassetio.managerApi import ManagerInterface
 from openassetio_mediacreation.traits.managementPolicy import ManagedTrait
 
-from . import ayon
+import ayon
+
 
 __all__ = [
     "AyonOpenAssetIOManagerInterface",

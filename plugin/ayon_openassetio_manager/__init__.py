@@ -1,5 +1,4 @@
 from openassetio.pluginSystem import PythonPluginSystemManagerPlugin
-from . import ayon_traits
 
 
 class AyonOpenAssetIOManagerPlugin(PythonPluginSystemManagerPlugin):
@@ -17,4 +16,4 @@ class AyonOpenAssetIOManagerPlugin(PythonPluginSystemManagerPlugin):
         return AyonOpenAssetIOManagerInterface()
 
 
-plugin = AyonOpenAssetIOManagerPlugin
+openassetioPlugin = AyonOpenAssetIOManagerPlugin

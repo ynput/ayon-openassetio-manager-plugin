@@ -9,7 +9,7 @@ Traits related to time.
 
 from typing import Union
 
-from openassetio import TraitsData
+from openassetio.trait import TraitsData
 
 
 class AnimationTrait:

@@ -65,7 +65,8 @@ def base_dir():
 
 @pytest.fixture
 def plugin_path_env(base_dir):
-    os.environ["OPENASSETIO_PLUGIN_PATH"] = os.path.join(base_dir, "ayon_openassetio_manager")
+    os.environ["OPENASSETIO_PLUGIN_PATH"] = os.path.join(
+        base_dir, "plugin")
     return os.environ["OPENASSETIO_PLUGIN_PATH"]
 
 

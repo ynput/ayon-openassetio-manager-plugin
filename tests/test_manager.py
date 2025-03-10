@@ -5,6 +5,8 @@ import platform
 import openassetio
 import openassetio.access
 import openassetio_mediacreation.traits as mc_traits
+from openassetio.errors import BatchElementError
+
 
 from .conftest import ProjectInfo
 
@@ -105,9 +107,9 @@ def test_resolve(project, manager):
         )
 
 
-def raise_batch_element_error(idx: int, error: openassetio.BatchElementError):
+def raise_batch_element_error(idx: int, error: BatchElementError):
     """
     Utility to work around current lack of exception-throwing
     convenience signatures in some OpenAssetIO methods.
     """
-    raise openassetio.BatchElementException(idx, error)
+    raise error

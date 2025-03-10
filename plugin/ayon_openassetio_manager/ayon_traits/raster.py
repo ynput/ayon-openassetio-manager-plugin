@@ -9,7 +9,7 @@ Traits related to raster images.
 
 from typing import Union
 
-from openassetio import TraitsData
+from openassetio.trait import TraitsData
 
 
 class ColorManagedTrait:

@@ -9,7 +9,7 @@ Core traits.
 
 from typing import Union
 
-from openassetio import TraitsData
+from openassetio.trait import TraitsData
 
 
 class ProductTrait:
