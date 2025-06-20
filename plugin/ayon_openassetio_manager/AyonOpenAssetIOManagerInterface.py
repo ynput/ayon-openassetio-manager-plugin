@@ -3,6 +3,7 @@ from __future__ import annotations
 import platform
 from pathlib import Path
 from timeit import default_timer as timer
+
 # import os
 from typing import Any, List, Set
 
@@ -12,11 +13,7 @@ import openassetio_mediacreation.traits as mc_traits
 import requests
 from openassetio.trait import TraitsData
 from openassetio.errors import BatchElementError
-from openassetio import (
-    EntityReference,
-    access,
-    constants
-)
+from openassetio import EntityReference, access, constants
 from openassetio.managerApi import ManagerInterface
 from openassetio_mediacreation.traits.managementPolicy import ManagedTrait
 
@@ -31,6 +28,7 @@ __all__ = [
 class ServerError(Exception):
     pass
 
+
 class AyonOpenAssetIOManagerInterface(ManagerInterface):
     """
     This class exposes the Basic Asset Library through the OpenAssetIO
@@ -43,8 +41,8 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
         super().__init__()
         self.__settings = ayon.make_default_settings()
         self.__session = requests.Session()
-        self.__session.headers.update({'x-api-key': self.__settings[ayon.SERVER_API_KEY]})
-        self.__session.headers.update({'x-ayon-site-id': self._get_site_id()})
+        self.__session.headers.update({"x-api-key": self.__settings[ayon.SERVER_API_KEY]})
+        self.__session.headers.update({"x-ayon-site-id": self._get_site_id()})
 
     def _get_site_id(self) -> str:
         """Returns the AYON site id for the current session.
@@ -58,12 +56,16 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
         hostname = platform.node()
         system_platform = platform.system()
 
-        response = self.__session.get((
-            f"{self.__settings[ayon.SERVER_URL_KEY]}/api/system/sites?"
-            f"hostname={hostname}&platform={system_platform.lower()}")
+        response = self.__session.get(
+            (
+                f"{self.__settings[ayon.SERVER_URL_KEY]}/api/system/sites?"
+                f"hostname={hostname}&platform={system_platform.lower()}"
+            )
         )
         if response.status_code != 200:
-            raise ServerError(f"AYON server returned an error - {response.status_code} - {response.text}")
+            raise ServerError(
+                f"AYON server returned an error - {response.status_code} - {response.text}"
+            )
 
         return response.json()[0]["id"]
 
@@ -85,7 +87,7 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
         ayon.validate_settings(self.__settings)
 
         # add headers with the site id to the session
-        self.__session.headers.update({'x-ayon-site-id': self._get_site_id()})
+        self.__session.headers.update({"x-ayon-site-id": self._get_site_id()})
 
     def hasCapability(self, capability: ManagerInterface.Capability):
         supported_capabilities = (
@@ -96,19 +98,24 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
             ManagerInterface.Capability.kEntityTraitIntrospection,
             # Optional supported capabilities.
             ManagerInterface.Capability.kExistenceQueries,
-            ManagerInterface.Capability.kResolution)
+            ManagerInterface.Capability.kResolution,
+        )
         return capability in supported_capabilities
 
-    def managementPolicy(self,
-                         traitSets: List[Set[str]],
-                         policyAccess: access.PolicyAccess,
-                         context: openassetio.Context,
-                         hostSession: openassetio.managerApi.HostSession) -> List[TraitsData]:  # noqa: E501,N802, N803
+    def managementPolicy(
+        self,
+        traitSets: List[Set[str]],
+        policyAccess: access.PolicyAccess,
+        context: openassetio.Context,
+        hostSession: openassetio.managerApi.HostSession,
+    ) -> List[TraitsData]:  # noqa: E501,N802, N803
         policies = []
         for trait_set in traitSets:
             traits_data = TraitsData()
-            if (policyAccess == access.PolicyAccess.kRead and
-                    mc_traits.content.LocatableContentTrait.kId in trait_set):  # noqa: E501
+            if (
+                policyAccess == access.PolicyAccess.kRead
+                and mc_traits.content.LocatableContentTrait.kId in trait_set
+            ):  # noqa: E501
                 ManagedTrait.imbueTo(traits_data)
                 mc_traits.content.LocatableContentTrait.imbueTo(traits_data)
             policies.append(traits_data)
@@ -122,16 +129,18 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
             start = timer()
             response = self.__session.post(
                 f"{self.__settings[ayon.SERVER_URL_KEY]}/api/resolve",
-                json={"uris": [str(ref) for ref in entityRefs]})
+                json={"uris": [str(ref) for ref in entityRefs]},
+            )
             end = timer()
-            hostSession.logger().debug(
-                f"entityExists took {end - start} seconds.")
+            hostSession.logger().debug(f"entityExists took {end - start} seconds.")
 
         except requests.exceptions.RequestException as err:
             raise ServerError("Failed to connect to AYON server") from err
 
         if response.status_code != 200:
-            raise ServerError(f"AYON server returned an error - {response.status_code} - {response.text}")  # noqa: E501
+            raise ServerError(
+                f"AYON server returned an error - {response.status_code} - {response.text}"
+            )  # noqa: E501
 
         for idx, rep in enumerate(response.json()):
             if rep["entities"]:
@@ -140,18 +149,26 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
                 successCallback(idx, False)
 
     def resolve(
-        self, entityReferences, traitSet, resolveAccess, context,
-        hostSession, successCallback, errorCallback
+        self,
+        entityReferences,
+        traitSet,
+        resolveAccess,
+        context,
+        hostSession,
+        successCallback,
+        errorCallback,
     ) -> List[TraitsData] | None:
-
         # Only support resolve for read, since we don't support
         # publishing yet.
         if resolveAccess != access.ResolveAccess.kRead:
             for idx in range(len(entityReferences)):
                 errorCallback(
-                    idx, BatchElementError(
+                    idx,
+                    BatchElementError(
                         BatchElementError.ErrorCode.kEntityAccessError,
-                        "Resolve for write is not yet supported"))
+                        "Resolve for write is not yet supported",
+                    ),
+                )
             return
 
         # if there is no LocatableContentTrait (path), bail out.
@@ -161,25 +178,23 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
                 successCallback(idx, TraitsData())
             return
 
-        payload = {
-            "resolveRoots": True,
-            "uris": [str(e) for e in entityReferences]
-        }
+        payload = {"resolveRoots": True, "uris": [str(e) for e in entityReferences]}
 
         try:
             start = timer()
             response = self.__session.post(
-                f"{self.__settings[ayon.SERVER_URL_KEY]}/api/resolve",
-                json=payload)
+                f"{self.__settings[ayon.SERVER_URL_KEY]}/api/resolve", json=payload
+            )
             end = timer()
-            hostSession.logger().debug(
-                f"resolve request took {end - start} seconds.")
+            hostSession.logger().debug(f"resolve request took {end - start} seconds.")
 
         except requests.exceptions.RequestException as err:
             raise ServerError("Failed to connect to AYON server") from err
 
         if response.status_code != 200:
-            raise ServerError(f"AYON server returned an error - {response.status_code} - {response.text}")  # noqa: E501
+            raise ServerError(
+                f"AYON server returned an error - {response.status_code} - {response.text}"
+            )  # noqa: E501
 
         for idx, rep in enumerate(response.json()):
             # if there are entities in response, we were able to resolve
@@ -192,9 +207,12 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
                 hostSession.logger().debug(f"location: {resolved_uri}")
                 successCallback(idx, traits_data)
             else:
-                errorCallback(idx, BatchElementError(
-                    BatchElementError.ErrorCode.kEntityResolutionError,
-                    "Entity not found"))
+                errorCallback(
+                    idx,
+                    BatchElementError(
+                        BatchElementError.ErrorCode.kEntityResolutionError, "Entity not found"
+                    ),
+                )
 
     def preflight(
         self,
@@ -204,7 +222,7 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
         context,
         hostSession,
         successCallback,
-        errorCallback
+        errorCallback,
     ):
         raise NotImplementedError("preflight is not supported")
 
@@ -247,47 +265,48 @@ class AyonOpenAssetIOManagerInterface(ManagerInterface):
         raise NotImplementedError("getWithRelationships is not supported")
 
     def getWithRelationshipPaged(
-            self,
-            entityReferences,
-            relationshipTraitsData,
-            resultTraitSet,
-            pageSize,
-            relationsAccess,
-            context,
-            hostSession,
-            successCallback,
-            errorCallback,
+        self,
+        entityReferences,
+        relationshipTraitsData,
+        resultTraitSet,
+        pageSize,
+        relationsAccess,
+        context,
+        hostSession,
+        successCallback,
+        errorCallback,
     ):
         raise NotImplementedError("getWithRelationship is not supported")
 
     def getWithRelationshipsPaged(
-            self,
-            entityReference,
-            relationshipTraitsDatas,
-            resultTraitSet,
-            pageSize,
-            relationsAccess,
-            context,
-            hostSession,
-            successCallback,
-            errorCallback,
+        self,
+        entityReference,
+        relationshipTraitsDatas,
+        resultTraitSet,
+        pageSize,
+        relationsAccess,
+        context,
+        hostSession,
+        successCallback,
+        errorCallback,
     ):
         raise NotImplementedError("getWithRelationships is not supported")
 
-    def __build_entity_ref(
-            self, entity_info: ayon.EntityInfo) -> EntityReference:
+    def __build_entity_ref(self, entity_info: ayon.EntityInfo) -> EntityReference:
         """Builds an openassetio EntityReference from an AYON EntityInfo.
-            Args:
-                entity_info: The AYON EntityInfo to build the
-                    EntityReference from.
+        Args:
+            entity_info: The AYON EntityInfo to build the
+                EntityReference from.
 
-            Returns:
-                EntityReference: The built EntityReference.
+        Returns:
+            EntityReference: The built EntityReference.
 
         """
-        ref_string = (f"ayon+entity://{entity_info.project_name}/"
-                      f"{entity_info.path}?"
-                      f"product={entity_info.product_name}&"
-                      f"version={entity_info.version_name}&"
-                      f"representation={entity_info.representation_name}")
+        ref_string = (
+            f"ayon+entity://{entity_info.project_name}/"
+            f"{entity_info.path}?"
+            f"product={entity_info.product_name}&"
+            f"version={entity_info.version_name}&"
+            f"representation={entity_info.representation_name}"
+        )
         return self._createEntityReference(ref_string)
