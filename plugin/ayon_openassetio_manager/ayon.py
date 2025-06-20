@@ -1,26 +1,145 @@
+"""
+AYON config and utils.
+
+Utilities available without (i.e. prior to) importing the ayon_core library.
+"""
+
+import json
 import os
+import pathlib
+import platform
 import re
+import sys
 from dataclasses import dataclass
 from typing import Any, Dict, List, Set, Union
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlparse, urlencode
+
+import platformdirs
+
+import ayon_api
+from ayon_api.typing import BundlesInfoDict
+
 
 NAME_REGEX = r"^[a-zA-Z0-9_][a-zA-Z0-9_\.\-]*[a-zA-Z0-9_]$"
+# Required AYON config.
 SERVER_URL_KEY = "AYON_SERVER_URL"
 SERVER_API_KEY = "AYON_API_KEY"
+SERVER_BUNDLE_NAME_KEY = "AYON_BUNDLE_NAME"  # For project anatomy.
+# Optional AYON config.
+CLIENT_LAUNCHER_STORAGE_DIR_KEY = "AYON_LAUNCHER_STORAGE_DIR"  # For ayon_core library (optional).
+PROJECT_NAME_KEY = "AYON_PROJECT_NAME"
+PATH_NAME_KEY = "AYON_PATH_NAME"
+TASK_NAME_KEY = "AYON_TASK_NAME"
+
+env_var_settings = [
+    SERVER_URL_KEY,
+    SERVER_API_KEY,
+    SERVER_BUNDLE_NAME_KEY,
+    CLIENT_LAUNCHER_STORAGE_DIR_KEY,
+    PROJECT_NAME_KEY,
+]
+
+
+def bootstrap_ayon_core(bundle_name: str, bundles_info: BundlesInfoDict):
+    """
+    Appends the AYON core addon and dependency packages directories to sys.path.
+
+    E.g. by default on linux, `~/.local/share/AYON/addons/core_1.3.2` and
+    `~/.local/share/AYON/dependency_packages/ayon_2502101346_linux-rocky9.zip/dependencies`.
+
+    This allows us to make use of the utilities in ayon_core, rather than
+    reinventing them.
+    """
+    ayon_storage_dir = pathlib.Path(
+        os.environ.get(
+            CLIENT_LAUNCHER_STORAGE_DIR_KEY, platformdirs.user_data_dir("AYON", "Ynput")
+        )
+    )
+
+    bundle = next(
+        (bundle for bundle in bundles_info["bundles"] if bundle["name"] == bundle_name),
+        None,
+    )
+    if bundle is None:
+        raise RuntimeError(f"Bundle {bundle_name} not found")
+
+    ayon_addons_dir = ayon_storage_dir / "addons"
+    if not ayon_addons_dir.is_dir():
+        raise RuntimeError(f"No AYON addons found at '{ayon_addons_dir}'")
+
+    core_addon_dir = ayon_addons_dir / f"core_{bundle['addons']['core']}"
+    if not core_addon_dir.is_dir():
+        raise RuntimeError(f"No core addon found at '{core_addon_dir}'")
+
+    core_addon_vendor_dir = core_addon_dir / "ayon_core" / "vendor" / "python"
+
+    ayon_dependency_packages_dir = ayon_storage_dir / "dependency_packages"
+    if not ayon_dependency_packages_dir.is_dir():
+        raise RuntimeError(f"No AYON dependencies found at '{ayon_dependency_packages_dir}'")
+
+    ayon_dependency_packages_dir /= bundle["dependencyPackages"][sys.platform]
+    ayon_dependency_packages_dir /= "dependencies"
+    if not ayon_dependency_packages_dir.is_dir():
+        raise RuntimeError(
+            f"No AYON dependencies found for platform '{sys.platform}' at"
+            f" '{ayon_dependency_packages_dir}'"
+        )
+
+    # Add the core addon directory to sys.path if not already present
+    if str(core_addon_dir) not in sys.path:
+        sys.path.append(str(core_addon_dir))
+
+    # Sundry utils for UI delegate usage.
+    if str(core_addon_vendor_dir) not in sys.path:
+        sys.path.append(str(core_addon_vendor_dir))
+
+    # Add the dependency packages directory to sys.path if not already present.
+    if str(ayon_dependency_packages_dir) not in sys.path:
+        sys.path.append(str(ayon_dependency_packages_dir))
+
+    from . import ayon_core_util
+
+    ayon_core_util.bootstrap_pyblish()
+
+
+def query_site_id() -> str:
+    """
+    Returns the AYON site id for the current session.
+
+    The combination of hostname and platform is enough to determine the
+    site id.
+
+    Returns:
+        str: The site id for the current session.
+    """
+    hostname = platform.node()
+    system_platform = platform.system()
+
+    response = ayon_api.get("system/sites", hostname=hostname, platform=system_platform.lower())
+    if response.status_code != 200:
+        raise ServerError(
+            f"AYON server returned an error - {response.status_code} - {response.text}"
+        )
+
+    return response.data[-1]["id"]
 
 
 @dataclass
 class EntityInfo:
     """Identifies an AYON product."""
 
-    uri: str
-    project_name: str
-    path: Union[str, None]
-    product_name: Union[str, None]
-    task_name: Union[str, None]
-    version_name: Union[str, None]
-    representation_name: Union[str, None]
-    workfile_name: Union[str, None]
+    uri: str = None
+    project_name: str = None
+    path: Union[str, None] = None
+    product_name: Union[str, None] = None
+    product_type: Union[str, None] = None
+    task_name: Union[str, None] = None
+    version_name: Union[str, None] = None
+    representation_name: Union[str, None] = None
+    workfile_name: Union[str, None] = None
+    variant_name: Union[str, None] = None
+    comment: Union[str, None] = None
+    preflight_data: Union[dict[str, Union[str, int, float, bool]], None] = None
 
 
 @dataclass
@@ -48,8 +167,9 @@ class Representation:
 def make_default_settings() -> dict:
     """Returns the default settings for the AYON plugin."""
     return {
-        SERVER_URL_KEY: os.getenv("AYON_SERVER_URL", "http://localhost:5000"),
-        SERVER_API_KEY: os.getenv("AYON_API_KEY")
+        SERVER_URL_KEY: os.getenv(SERVER_URL_KEY, "http://localhost:5000"),
+        SERVER_API_KEY: os.getenv(SERVER_API_KEY),
+        SERVER_BUNDLE_NAME_KEY: os.getenv(SERVER_BUNDLE_NAME_KEY),
     }
 
 
@@ -70,11 +190,13 @@ def validate_settings(settings: dict):
         raise KeyError(f"Missing AYON API Key in Settings '{SERVER_API_KEY}'")
 
     if SERVER_URL_KEY not in settings:
-        raise KeyError(
-            f"Missing AYON Server URL in Settings '{SERVER_URL_KEY}'")
+        raise KeyError(f"Missing AYON Server URL in Settings '{SERVER_URL_KEY}'")
+
+    if SERVER_BUNDLE_NAME_KEY not in settings:
+        raise KeyError(f"Missing AYON Server Bundle Name in Settings '{SERVER_BUNDLE_NAME_KEY}'")
 
     for key in settings:
-        if key not in defaults:
+        if key not in defaults and key not in env_var_settings:
             raise KeyError(f"Unknown setting '{key}'")
 
 
@@ -87,10 +209,13 @@ def parse_entity_ref(entity_ref: str) -> EntityInfo:
     project_name: str
     path: Union[str, None]
     product_name: Union[str, None]
+    product_type: Union[str, None]
     task_name: Union[str, None]
     version_name: Union[str, None]
     representation_name: Union[str, None]
     workfile_name: Union[str, None]
+    variant_name: Union[str, None]
+    comment: Union[str, None]
 
     parsed_uri = urlparse(entity_ref)
     assert parsed_uri.scheme in [
@@ -100,16 +225,19 @@ def parse_entity_ref(entity_ref: str) -> EntityInfo:
 
     project_name = parsed_uri.netloc
     name_validator = re.compile(NAME_REGEX)
-    assert name_validator.match(
-        project_name), f"Invalid project name: {project_name}"
+    assert name_validator.match(project_name), f"Invalid project name: {project_name}"
 
-    path = parsed_uri.path.strip("/") or None
+    path = parsed_uri.path
 
     qs: dict[str, Any] = parse_qs(parsed_uri.query)
 
     product_name = qs.get("product", [None])[0]
     if product_name is not None:
         _validate_name(product_name)
+
+    product_type = qs.get("product_type", [None])[0]
+    if product_type is not None:
+        _validate_name(product_type)
 
     task_name = qs.get("task", [None])[0]
     if task_name is not None:
@@ -127,16 +255,79 @@ def parse_entity_ref(entity_ref: str) -> EntityInfo:
     if workfile_name is not None:
         _validate_name(workfile_name)
 
+    variant_name = qs.get("variant", [None])[0]
+    if workfile_name is not None:
+        _validate_name(variant_name)
+
+    comment = qs.get("comment", [None])[0]
+
+    # Data gathered by preflight(), encoded in the working entity
+    # reference that it returns.
+    preflight_data = qs.get("preflight", [None])[0]
+    if preflight_data is not None:
+        preflight_data = json.loads(preflight_data)
+
     return EntityInfo(
         uri=entity_ref,
         project_name=project_name,
         path=path,
         product_name=product_name,
+        product_type=product_type,
         task_name=task_name,
         version_name=version_name,
         representation_name=representation_name,
         workfile_name=workfile_name,
+        preflight_data=preflight_data,
+        variant_name=variant_name,
+        comment=comment,
     )
+
+
+def build_entity_ref(entity_info: EntityInfo) -> str:
+    """
+    Builds a URI identifying an AYON entity.
+    """
+    path = entity_info.path.lstrip("/")
+    ref_string = f"ayon+entity://{entity_info.project_name}/{path}"
+
+    qs = []
+
+    if entity_info.product_name is not None:
+        qs.append(f"product={entity_info.product_name}")
+
+    if entity_info.product_type is not None:
+        qs.append(f"product_type={entity_info.product_type}")
+
+    if entity_info.task_name is not None:
+        qs.append(f"task={entity_info.task_name}")
+
+    if entity_info.workfile_name is not None:
+        qs.append(f"workfile={entity_info.workfile_name}")
+
+    if entity_info.representation_name is not None:
+        qs.append(f"representation={entity_info.representation_name}")
+
+    if entity_info.version_name is not None:
+        qs.append(f"version={entity_info.version_name}")
+
+    if entity_info.variant_name is not None:
+        qs.append(f"variant={entity_info.variant_name}")
+
+    if entity_info.preflight_data is not None:
+        # Data gathered by preflight(), encoded in the working entity
+        # reference that it returns.
+        preflight_data = json.dumps(entity_info.preflight_data)
+        preflight_data = urlencode({"preflight": preflight_data})
+        qs.append(preflight_data)
+
+    if entity_info.comment is not None:
+        comment_data = urlencode({"comment": entity_info.comment})
+        qs.append(comment_data)
+
+    if qs:
+        ref_string += f"?{'&'.join(qs)}"
+
+    return ref_string
 
 
 def _dict_has_traits(data: dict, traits: dict) -> bool:
@@ -155,8 +346,7 @@ def _dict_has_traits(data: dict, traits: dict) -> bool:
     return True
 
 
-def _entity_has_trait_set(
-        entity_data: Representation, trait_set: Set[str]) -> bool:
+def _entity_has_trait_set(entity_data: Representation, trait_set: Set[str]) -> bool:
     """Determine if the entity has the trait ids within its trait set.
 
     Args:
@@ -191,5 +381,8 @@ class UnknownAyonEntity(RuntimeError):
 
 class MalformedAyonReference(RuntimeError):
     def __init__(self, message, reference: str):
-        super().__init__(
-            f"Malformed entity reference: {message} '{reference}'")
+        super().__init__(f"Malformed entity reference: {message} '{reference}'")
+
+
+class ServerError(Exception):
+    pass
