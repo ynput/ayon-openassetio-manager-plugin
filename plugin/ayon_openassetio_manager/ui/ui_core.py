@@ -70,6 +70,7 @@ _mime_to_extension = {
     "image/x-dtex": "dtex",
     "image/x-exr": "exr",
     "image/x-rla": "rla",
+    "model/vnd.usd": "usd",
     "model/vnd.usda": "usda",
     "model/vnd.usdz+zip": "usdz",
 }
@@ -87,6 +88,7 @@ _mime_to_product = {
     "application/vnd.foundry.katana.rig+xml": "camera",
     "application/vnd.foundry.katana.scenegraph-bookmarks+xml": "settings",
     "inode/directory": "assembly",
+    "model/vnd.usd": "usd",  # Interestingly not IANA registered, unlike usda and usdz.
     "model/vnd.usda": "usd",
     "model/vnd.usdz+zip": "usd",
 }
