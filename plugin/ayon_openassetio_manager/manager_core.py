@@ -256,7 +256,13 @@ class AyonOpenAssetIOManagerInterfaceCore:
                     resolved_uri = Path(wildcard_path).as_uri()
 
                 elif file_path := entity_identity.get("filePath"):
-                    resolved_uri = Path(file_path).as_uri()
+                    try:
+                        resolved_uri = Path(file_path).as_uri()
+                    except ValueError as exc:
+                        # E.g. root path not resolved.
+                        host_session.logger().error(
+                            f"Failed to convert file path '{file_path}' to a URL: {exc}"
+                        )
 
                 if resolved_uri is not None:
                     # Only set location if URI was found. Note that if
