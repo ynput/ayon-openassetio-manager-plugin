@@ -614,9 +614,10 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
 
             # Fallback to MIME type mapping.
             locatable_content_trait = LocatableContentTrait(traits_data)
-            if mime_type := locatable_content_trait.getMimeType():
-                if product_name := _mime_to_product.get(mime_type):
-                    return product_name
+            if mime_types := locatable_content_trait.getMimeType():
+                for mime_type in mime_types.split(","):
+                    if product_type := _mime_to_product.get(mime_type):
+                        return product_type
 
         return None
 
