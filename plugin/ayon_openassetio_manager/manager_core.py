@@ -350,6 +350,7 @@ class AyonOpenAssetIOManagerInterfaceCore:
                     )
 
                     resolved_uri = Path(wildcard_path).as_uri()
+                    mc_traits.content.LocatableContentTrait(traits_data).setIsTemplated(True)
 
                 elif file_path := entity_identity.get("filePath"):
                     try:
@@ -360,6 +361,7 @@ class AyonOpenAssetIOManagerInterfaceCore:
                             f"Failed to convert file path '{file_path}' "
                             f"to a URL: {exc}"
                         )
+                    mc_traits.content.LocatableContentTrait(traits_data).setIsTemplated(False)
 
                 if resolved_uri is not None:
                     # Only set location if URI was found. Note that if
