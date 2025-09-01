@@ -185,6 +185,25 @@ def query_identity_for_entity_refs(  # noqa: C901, PLR0912, PLR0914
 
                     entity_identity["filePath"] = workfile_path
 
+    # If multiple entities are returned for a single entity reference,
+    # and they all have a versionId and representationId (i.e. versioned
+    # files), then filter to just the latest version.
+    for entity_identity in result:
+        entities = entity_identity.get("entities", [])
+        if len(entities) > 1:
+            if all(
+                entity.get("versionId") and entity.get("representationId") for entity in entities
+            ):
+                version_nums = [
+                    ayon_api.get_version_by_id(
+                        entity["projectName"], entity["versionId"], fields=["version"]
+                    )["version"]
+                    for entity in entities
+                ]
+                latest_version_and_entity = max(zip(version_nums, entities))
+                latest_entity = latest_version_and_entity[1]
+                entity_identity["entities"] = [latest_entity]
+
     return result
 
 
@@ -531,6 +550,7 @@ class OpenAssetIOHost(HostBase, IPublishHost, ILoadHost, IWorkfileHost):
     is associated with a particular entity, whenever we need access to an AYON
     utility that requires a Host in order to function.
     """
+
     def __init__(self, entity_info: ayon.EntityInfo):
         """Constructor."""
         super().__init__()
