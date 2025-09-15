@@ -1,32 +1,33 @@
-"""
-Provides access to useful functionality in ayon_core.
+"""Provides access to useful functionality in ayon_core.
 
 Assumes ayon_core is importable, i.e. available on sys.path.
 """
+from __future__ import annotations
 
 import os
 import pathlib
-
-from openassetio.log import LoggerInterface
+from typing import TYPE_CHECKING, Any, Optional
 
 import ayon_api
-
-import pyblish.api
-
 import ayon_core
-from ayon_core.pipeline.anatomy.anatomy import Anatomy
-from ayon_core.pipeline.create.creator_plugins import Creator
-from ayon_core.pipeline.create.context import CreateContext
-from ayon_core.pipeline.create.structures import CreatedInstance
-from ayon_core.pipeline import register_host, registered_host
+import pyblish.api
+import requests
 from ayon_core.host import HostBase
-from ayon_core.host.interfaces import IPublishHost, ILoadHost, IWorkfileHost
+from ayon_core.host.interfaces import ILoadHost, IPublishHost, IWorkfileHost
+from ayon_core.pipeline import register_host, registered_host
+from ayon_core.pipeline.anatomy.anatomy import Anatomy
+from ayon_core.pipeline.create.context import CreateContext
+from ayon_core.pipeline.create.creator_plugins import Creator
 from ayon_core.settings import get_project_settings
 from ayon_core.tools.workfiles.control import BaseWorkfileController
+from openassetio.log import LoggerInterface
 
 from . import ayon
 
-__all__ = [
+if TYPE_CHECKING:
+    from ayon_core.pipeline.create import CreatedInstance
+
+_all__ = [
     "bootstrap_pyblish",
     "query_identity_for_entity_refs",
     "query_product_name_for_entity",
@@ -38,12 +39,12 @@ __all__ = [
 ]
 
 
-def bootstrap_pyblish():
-    """
-    Configure pyblish to use the default core AYON publish plugins.
-    """
+def bootstrap_pyblish() -> None:
+    """Configure pyblish to use the default core AYON publish plugins."""
     # Register the default core pyblish publish plugins.
-    plugins_dir = pathlib.Path(ayon_core.__file__).parent / "plugins" / "publish"
+    plugins_dir = (
+            pathlib.Path(ayon_core.__file__).parent / "plugins" / "publish"
+    ).resolve()
     pyblish.api.register_plugin_path(str(plugins_dir))
     # Required so that currentFile is added to the context by the
     # CollectCurrentShellFile pyblish plugin, which is required by
@@ -51,8 +52,10 @@ def bootstrap_pyblish():
     pyblish.api.register_host("shell")
 
 
-def query_identity_for_entity_refs(entity_references: list[str]) -> list[dict]:
-    """
+def query_identity_for_entity_refs(  # noqa: C901, PLR0912, PLR0914
+        entity_references: list[str]) -> list[dict]:
+    """Get identities for the given entity references.
+
     Query the database IDs of the AYON entities associated with the given
     entity references.
 
@@ -64,6 +67,19 @@ def query_identity_for_entity_refs(entity_references: list[str]) -> list[dict]:
     reference, if there are implicit or explicit wildcards (e.g. if a
     version is not specified, then all versions of the product will be
     returned).
+
+    TODO (antirotor): Refactor this a little bit since the bug
+        https://github.com/ynput/ayon-backend/pull/671 is fixed.
+
+    Args:
+        entity_references (list[str]): List of AYON entity references.
+
+    Returns:
+        list[dict]: List of entity identities, one per entity reference.
+
+    Raises:
+        RuntimeError: If the AYON server returns an error.
+
     """
     workfile_idx_and_refs = []
     non_workfile_idx_and_refs = []
@@ -75,7 +91,7 @@ def query_identity_for_entity_refs(entity_references: list[str]) -> list[dict]:
         else:
             non_workfile_idx_and_refs.append((idx, ref_str))
 
-    result = [{}] * len(entity_references)
+    result: list[dict[str, Any]] = [{}] * len(entity_references)
 
     if non_workfile_idx_and_refs:
         non_workfile_idxs, non_workfile_refs = zip(*non_workfile_idx_and_refs)
@@ -83,24 +99,36 @@ def query_identity_for_entity_refs(entity_references: list[str]) -> list[dict]:
         # the server will error. However, task may legitimately be encoded in
         # the entity reference for publishing purposes, i.e. to compute a
         # product name. So we must strip it.
-        entity_infos = [ayon.parse_entity_ref(ref) for ref in non_workfile_refs]
+        entity_infos = [
+            ayon.parse_entity_ref(ref)
+            for ref in non_workfile_refs
+        ]
         for entity_info in entity_infos:
             entity_info.task_name = None
-        non_workfile_refs = [ayon.build_entity_ref(entity_info) for entity_info in entity_infos]
+        non_workfile_refs = [
+            ayon.build_entity_ref(entity_info)
+            for entity_info in entity_infos
+        ]
 
         response: ayon_api.server_api.RestApiResponse = ayon_api.post(
             "resolve", resolveRoots=True, uris=non_workfile_refs
         )
 
-        if response.status_code != 200:
-            raise RuntimeError(
-                f"AYON server returned an error - {response.status_code} - {response.text}"
-            )  # noqa: E501
+        if response.status_code != requests.codes.ok:
+            msg = (
+                f"Failed to resolve entity references {non_workfile_refs} - "
+                f"{response.status_code} - {response.text}"
+            )
+
+            raise RuntimeError(msg)
 
         # TODO(DF): data may have an "error" key, which should be handled.
         non_workfile_entity_identities = response.data
 
-        for idx, entity_identity in zip(non_workfile_idxs, non_workfile_entity_identities):
+        for idx, entity_identity in zip(  # noqa: B905
+                non_workfile_idxs,
+                non_workfile_entity_identities,
+            ):
             result[idx] = entity_identity
 
     # Work around URIs for workfiles not being accepted:
@@ -120,7 +148,10 @@ def query_identity_for_entity_refs(entity_references: list[str]) -> list[dict]:
             entity_identity["folderId"] = folder_id
 
             task_data = ayon_api.get_task_by_name(
-                entity_info.project_name, folder_id, entity_info.task_name, fields=["id"]
+                entity_info.project_name,
+                folder_id,
+                entity_info.task_name,
+                fields=["id"]
             )
             if task_data is None:
                 continue
@@ -135,7 +166,10 @@ def query_identity_for_entity_refs(entity_references: list[str]) -> list[dict]:
 
                 if entity_info.workfile_name is not None:
                     workfile_info = next(
-                        (wf for wf in workfiles_info if wf["name"] == entity_info.workfile_name),
+                        (
+                            wf for wf in workfiles_info
+                            if wf["name"] == entity_info.workfile_name
+                        ),
                         {},
                     )
                 else:
@@ -146,7 +180,8 @@ def query_identity_for_entity_refs(entity_references: list[str]) -> list[dict]:
                     entity_identity["workfileId"] = workfile_id
 
                 if workfile_path := workfile_info.get("path"):
-                    workfile_path = Anatomy(entity_info.project_name).path_remapper(workfile_path)
+                    workfile_path = Anatomy(
+                        entity_info.project_name).path_remapper(workfile_path)
 
                     entity_identity["filePath"] = workfile_path
 
@@ -154,8 +189,14 @@ def query_identity_for_entity_refs(entity_references: list[str]) -> list[dict]:
 
 
 def query_product_name_for_entity(entity_info: ayon.EntityInfo) -> str:
-    """
-    Query the product name for the given entity.
+    """Query the product name for the given entity.
+
+    Args:
+        entity_info (ayon.EntityInfo): The entity information.
+
+    Returns:
+        str: The product name.
+
     """
     creator = _creator_for_entity(entity_info)
 
@@ -165,7 +206,8 @@ def query_product_name_for_entity(entity_info: ayon.EntityInfo) -> str:
     task_entity = (
         folder_entity
         and entity_info.task_name
-        and ayon_api.get_task_by_name(project_name, folder_entity["id"], entity_info.task_name)
+        and ayon_api.get_task_by_name(
+            project_name, folder_entity["id"], entity_info.task_name)
     )
 
     return creator.get_product_name(
@@ -177,9 +219,15 @@ def query_product_name_for_entity(entity_info: ayon.EntityInfo) -> str:
     )
 
 
-def query_staging_dir_for_entity(entity_info: ayon.EntityInfo):
-    """
-    Query the staging directory for the given entity.
+def query_staging_dir_for_entity(entity_info: ayon.EntityInfo) -> str:
+    """Query the staging directory for the given entity.
+
+    Args:
+        entity_info (ayon.EntityInfo): The entity information.
+
+    Returns:
+        str: The staging directory path.
+
     """
     creator = _creator_for_entity(entity_info)
 
@@ -193,7 +241,7 @@ def query_staging_dir_for_entity(entity_info: ayon.EntityInfo):
         {},
     )
 
-    return creator.get_staging_dir(created_instance)
+    return creator.get_staging_dir(created_instance).directory
 
 
 def publish_representation(
@@ -201,35 +249,52 @@ def publish_representation(
     instance_data: dict,
     files: list[str],
     logger: LoggerInterface,
-):
-    """
-    Execute AYON's pyblish publishing process.
+) -> list[str]:
+    """Execute AYON's pyblish publishing process.
 
-    Use the default core AYON pyblish plugins running against a temporary "host"
-    created only for this publish.
+    Use the default core AYON pyblish plugins running against
+    a temporary "host" created only for this publish.
+
+    Args:
+        entity_info (ayon.EntityInfo): The entity information.
+        instance_data (dict): The instance data for the representation
+            to publish.
+        files (list[str]): List of file paths to include in
+            the representation.
+        logger (LoggerInterface): Logger to use for logging.
+
+    Returns:
+        list[str]: List of published representation IDs.
+
+    Raises:
+        RuntimeError: If the publish process fails.
+
     """
     pyblish_ctx = pyblish.api.Context()
 
     pyblish_ctx.data["projectName"] = entity_info.project_name
 
+    optional_representation_data_keys = [
+        # TODO(DF): representation frame range vs. instance.data
+        #   (version) frame range?
+        "frameStart",
+        "frameEnd",
+        "stagingDir",
+    ]
     representation_data = {
         "tags": [],
         "name": entity_info.representation_name,
         "ext": entity_info.representation_name,
         "files": files,
     }
-    optional_representation_data_keys = [
-        # TODO(DF): representation frame range vs. instance.data (version) frame range?
-        "frameStart",
-        "frameEnd",
-        "stagingDir",
-    ]
     for key in optional_representation_data_keys:
         if key in instance_data:
             representation_data[key] = instance_data[key]
 
     if "colorspace" in instance_data:
-        representation_data["colorspaceData"] = {"colorspace": instance_data["colorspace"]}
+        representation_data["colorspaceData"] = {
+            "colorspace": instance_data["colorspace"]
+        }
 
     instance = pyblish_ctx.create_instance(entity_info.product_name)
     instance.data.update(
@@ -260,10 +325,12 @@ def publish_representation(
         if key in instance_data:
             instance.data[key] = instance_data[key]
 
-    # TODO(DF): This is a blunt instrument to force a colour space update on the
-    #  version, which might be naughty.
+    # TODO(DF): This is a blunt instrument to force a colour space
+    #  update on the version, which might be naughty.
     if "colorspace" in instance_data:
-        instance.data["versionData"] = {"colorSpace": instance_data["colorspace"]}
+        instance.data["versionData"] = {
+            "colorSpace": instance_data["colorspace"]
+        }
 
     # Temporarily override the registered host object with our temporary
     # host created just for this publish. Host is required by pyblish
@@ -287,9 +354,20 @@ def publish_representation(
                 errors.append(error)
 
         published_instance = pyblish_ctx[0]
-        published_representations = published_instance.data.get("published_representations")
+        published_representations = published_instance.data.get(
+            "published_representations"
+        )
         if not published_representations:
-            raise RuntimeError("\n".join(errors) if errors else "No representations published.")
+            msg = (
+                "No representations were published. Ensure that at least one"
+                " publish plugin was executed. Errors:\n"
+                + (
+                    "\n".join(errors)
+                    if errors
+                    else "No representations published."
+                )
+            )
+            raise RuntimeError(msg)
 
         return list(published_representations.keys())
     finally:
@@ -301,12 +379,19 @@ def publish_workfile(
     entity_info: ayon.EntityInfo,
     entity_identity: dict[str, str],
     workfile_path: str,
-    note="",
-):
-    """
-    Execute the publish process for a workfile.
+    note: str = "",
+) -> None:
+    """Execute the publish process for a workfile.
 
     Registers the workfile in AYON, associating it with a project/folder/task.
+
+    Args:
+        entity_info (ayon.EntityInfo): The entity information.
+        entity_identity (dict[str, str]): The entity identity containing at
+            least the folderId and taskId.
+        workfile_path (str): The path to the workfile to register.
+        note (str): An optional note to associate with the workfile.
+
     """
     _OpenAssetIOWorkfileController(OpenAssetIOHost(entity_info)).save_workfile_info(
         entity_identity["folderId"], entity_info.task_name, workfile_path, note
@@ -316,16 +401,38 @@ def publish_workfile(
 def query_workfile_path(
     entity_info: ayon.EntityInfo,
     entity_identity: dict[str, str],
-    use_last_version: bool = False,
     comment: str = "",
-):
-    """
-    Construct a (new) workfile path for the given entity.
+    *,
+    use_last_version: bool = False,
+) -> pathlib.Path:
+    """Construct a (new) workfile path for the given entity.
+
+    Args:
+        entity_info (ayon.EntityInfo): The entity information.
+        entity_identity (dict[str, str]): The entity identity containing at
+            least the folderId and taskId.
+        use_last_version (bool): Whether to use the last version number in
+            the constructed path.
+        comment (str): An optional comment to associate with the workfile.
+
+    Returns:
+        str: The constructed workfile path.
+
+    Raises:
+        ValueError: If the entity info does not contain a workfile name.
+
     """
     controller = _OpenAssetIOWorkfileController(OpenAssetIOHost(entity_info))
     save_as_data = controller.get_workarea_save_as_data(
         entity_identity["folderId"], entity_identity["taskId"]
     )
+
+    if entity_info.workfile_name is None:
+        msg = (
+            "Cannot construct workfile path without a workfile name in the"
+            " entity info."
+        )
+        raise ValueError(msg)
 
     filename, extension = os.path.splitext(entity_info.workfile_name)
     if not extension:
@@ -342,31 +449,18 @@ def query_workfile_path(
     return workarea_file_path_result.filepath
 
 
-# def workfile_dir(self, entity_info: "EntityInfo", entity_identity: dict[str, str]) -> str:
-#     project_name = entity_info.project_name
-#     project = get_project(project_name)
-#     folder = get_folder_by_id(project_name, entity_identity["folderId"])
-#     task = get_task_by_id(project_name, entity_identity["taskId"])
-#     host = self.__create_ayon_host(
-#         entity_info.project_name, entity_info.path, entity_info.task_name
-#     )
-#     project_settings = get_project_settings(project_name)
-#     anatomy = Anatomy(project_name)
-#
-#     workdir_data = get_template_data(project, folder, task, host.name, project_settings)
-#
-#     workdir = get_workdir_with_workdir_data(
-#         workdir_data, project_name, anatomy, project_settings=project_settings
-#     )
-#     return workdir
-
-
-def _creator_for_entity(entity_info: ayon.EntityInfo):
-    """
-    Construct a Creator for the given entity information.
+def _creator_for_entity(entity_info: ayon.EntityInfo) -> Creator:
+    """Construct a Creator for the given entity information.
 
     A bespoke CreateContext and Host is also created for the given entity info
     and associated with the Creator.
+
+    Args:
+        entity_info (ayon.EntityInfo): The entity information.
+
+    Returns:
+        Creator: The Creator instance.
+
     """
     project_settings = get_project_settings(entity_info.project_name)
     create_context = CreateContext(
@@ -377,26 +471,24 @@ def _creator_for_entity(entity_info: ayon.EntityInfo):
     )
     create_context.reset_current_context()
     return _OpenAssetIOCreator(
-        entity_info.product_type, project_settings, create_context, headless=True
+        entity_info.product_type, project_settings,
+        create_context, headless=True
     )
 
 
 class _OpenAssetIOWorkfileController(BaseWorkfileController):
-    """
-    Convenience functions for dealing with workfiles in AYON.
-    """
-    def __init__(self, host: "OpenAssetIOHost"):
+    """Convenience functions for dealing with workfiles in AYON."""
+    def __init__(self, host: OpenAssetIOHost):
         super().__init__(host)
         self.reset()  # Copy settings from `host`.
 
 
 class _OpenAssetIOCreator(Creator):
-    """
-    AYON OpenAssetIO Creator.
+    """AYON OpenAssetIO Creator.
 
     A barebones Creator implementation just to surface its handy utilities.
     """
-    def __init__(self, product_type: str, *args, **kwargs):
+    def __init__(self, product_type: str, *args, **kwargs):  # noqa: ANN002, ANN003
         self.__product_type = product_type
         super().__init__(*args, **kwargs)
 
@@ -410,19 +502,25 @@ class _OpenAssetIOCreator(Creator):
     ) -> CreatedInstance:
         return self._create_instance(product_name, instance_data)
 
-    def collect_instances(self):
-        raise NotImplementedError()
+    def collect_instances(self) -> list[CreatedInstance]:
+        """Collect instances that can be created by this Creator."""
+        raise NotImplementedError
 
-    def remove_instances(self, instances):
-        raise NotImplementedError()
+    def remove_instances(self, instances: list[CreatedInstance]) -> None:
+        """Remove the given instances.
 
-    def update_instances(self, update_list):
-        raise NotImplementedError()
+        Args:
+            instances (list[CreatedInstance]): Instances to remove.
+
+        """
+        raise NotImplementedError
+
+    def update_instances(self, update_list: list[CreatedInstance]) -> None:
+        raise NotImplementedError
 
 
 class OpenAssetIOHost(HostBase, IPublishHost, ILoadHost, IWorkfileHost):
-    """
-    AYON OpenAssetIO Host.
+    """AYON OpenAssetIO Host.
 
     Usually, there is a single Host object per application, abstracting the
     application-specific functionality required by other more generic AYON
@@ -434,51 +532,112 @@ class OpenAssetIOHost(HostBase, IPublishHost, ILoadHost, IWorkfileHost):
     utility that requires a Host in order to function.
     """
     def __init__(self, entity_info: ayon.EntityInfo):
+        """Constructor."""
         super().__init__()
         self.__entity_info = entity_info
 
     @property
-    def name(self):
+    def name(self) -> str:
+        """Name of the host application."""
         return "OpenAssetIO"
 
-    def get_current_project_name(self):
+    def get_current_project_name(self) -> str:
+        """Get the current project name.
+
+        Returns:
+            str: The current project name.
+
+        """
         return self.__entity_info.project_name
 
-    def get_current_folder_path(self):
-        return self.__entity_info.path
+    def get_current_folder_path(self) -> str:
+        """Get the current folder path.
 
-    def get_current_task_name(self):
-        return self.__entity_info.task_name
+        Returns:
+            str: The current folder path.
+        """
+        return self.__entity_info.path or ""
 
-    def get_context_data(self):
+    def get_current_task_name(self) -> str:
+        """Get the current task name.
+
+        Returns:
+            str: The current task name.
+
+        """
+        return self.__entity_info.task_name or ""
+
+    def get_context_data(self) -> dict[str, Any]:
+        """Get context data for the current context.
+
+        Returns:
+            dict[str, Any]: The context data.
+
+        """
         return {}
 
-    def update_context_data(self, data, changes):
-        raise NotImplementedError()
+    def update_context_data(self, data: dict, changes: dict) -> None:
+        """Update the context data.
 
-    def get_containers(self):
-        # E.g.required by  get_outdated_containers() called ultimately by
-        # ValidateOutdatedContainers.
+        Args:
+            data (dict): The context data to update.
+            changes (dict): The changes to apply to the context data.
+
+        """
+        raise NotImplementedError
+
+    def get_containers(self) -> list:
+        """Get the containers in the current scene.
+
+        Required by  get_outdated_containers() called ultimately by
+        `ValidateOutdatedContainers`.
+
+        Returns:
+            list: The containers in the current scene.
+
+        """
         return []
 
-    def get_workfile_extensions(self):
+    def get_workfile_extensions(self) -> list[str]:
+        """Get the workfile extensions for the current application.
+
+        Returns:
+            list[str]: The workfile extensions.
+
+        """
         if self.__entity_info.workfile_name is None:
             # TODO(DF): Currently just a dummy to prevent exceptions. Perhaps
             #  default list should be an exhaustive list?
             return [".unknown"]
-        filename, extension = os.path.splitext(self.__entity_info.workfile_name)
+        filename, extension = os.path.splitext(
+            self.__entity_info.workfile_name)
         if not extension:
             extension = filename
         if not extension.startswith("."):
             extension = f".{extension}"
         return [extension]
 
-    def save_workfile(self, dst_path=None):
-        raise NotImplementedError()
+    def save_workfile(self, dst_path: Optional[str] = None) -> None:
+        """Save the current workfile to the given path.
 
-    def open_workfile(self, filepath):
-        raise NotImplementedError()
+        Args:
+            dst_path (Optional[str]): The destination path to save
+                the workfile to.
 
-    def get_current_workfile(self):
-        # E.g. required by CreateContext.reset_current_context()
+        """
+        raise NotImplementedError
+
+    def open_workfile(self, filepath: str) -> None:
+        """Open the given workfile."""
+        raise NotImplementedError
+
+    def get_current_workfile(self) -> Optional[str]:
+        """Get the current workfile path.
+
+        E.g. required by CreateContext.reset_current_context()
+
+        Returns:
+            Optional[str]: The current workfile path.
+
+        """
         return None
