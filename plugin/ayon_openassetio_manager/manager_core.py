@@ -604,14 +604,16 @@ class AyonOpenAssetIOManagerInterfaceCore:
             frame_ranged_trait = mc_traits.timeDomain.FrameRangedTrait(
                 entity_traits_data)
             if frame_ranged_trait.isImbued():
-                if start_frame := frame_ranged_trait.getStartFrame():
+                start_frame = frame_ranged_trait.getStartFrame()
+                if start_frame is not None:
                     instance_data["frameStart"] = start_frame
                     if in_frame := frame_ranged_trait.getInFrame():
                         instance_data["handleStart"] = in_frame - start_frame
                     else:
                         instance_data["handleStart"] = 0
 
-                if end_frame := frame_ranged_trait.getEndFrame():
+                end_frame = frame_ranged_trait.getEndFrame()
+                if end_frame is not None:
                     instance_data["frameEnd"] = end_frame
                     if out_frame := frame_ranged_trait.getOutFrame():
                         instance_data["handleEnd"] = end_frame - out_frame
