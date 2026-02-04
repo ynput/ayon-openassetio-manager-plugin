@@ -19,7 +19,9 @@ dependencies = [
     "platformdirs",
     "semver",
     "arrow",
-    "attrs"
+    "attrs",
+    # Support caching
+    "cachetools"
 ]
 
 [project.optional-dependencies]

@@ -4,8 +4,11 @@ from __future__ import annotations
 import pathlib
 from pathlib import Path
 from typing import Any, Callable, Union
+from threading import Lock
+from cachetools import TTLCache
 
 import ayon_api
+
 import openassetio
 import openassetio_mediacreation.traits as mc_traits
 from ayon_core import pipeline
@@ -52,6 +55,8 @@ class AyonOpenAssetIOManagerInterfaceCore:
         """Constructor."""
         self.__settings = settings
         self.__fileUrlPathConverter = FileUrlPathConverter()
+        self.__resolve_cache_lock = Lock()
+        self.__resolve_cache = TTLCache(maxsize=1000, ttl=3)
 
     def createState(  # noqa: N802
             self, _host_session: HostSession) -> AyonManagerState:
@@ -269,6 +274,20 @@ class AyonOpenAssetIOManagerInterfaceCore:
             - Refactor to reduce complexity.
 
         """
+
+        # Cache results for a few seconds to avoid hammering the AYON server
+        cache_key = (tuple(str(ref) for ref in entity_references), frozenset(trait_set))
+
+        with self.__resolve_cache_lock:
+            cached_value = self.__resolve_cache.get(cache_key)
+
+        if cached_value is not None:
+            for idx, traits_data in enumerate(cached_value):
+                success_callback(idx, cached_value[idx])
+            return
+
+        cached_value = [None] * len(entity_references)
+
         entity_identities = ayon_core_util.query_identity_for_entity_refs(
             [str(ref) for ref in entity_references]
         )
@@ -400,7 +419,12 @@ class AyonOpenAssetIOManagerInterfaceCore:
                 # Add entity info to context for use in UI pre-population, etc.
                 context.managerState.most_recent_resolved_entity_info = entity_info  # noqa: E501
 
+            cached_value[idx] = traits_data
             success_callback(idx, traits_data)
+
+        if all(v is not None for v in cached_value):
+            with self.__resolve_cache_lock:
+                self.__resolve_cache[cache_key] = cached_value
 
     def __resolve_for_manager_driven(
         self,
