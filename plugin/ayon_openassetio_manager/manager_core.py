@@ -567,7 +567,7 @@ class AyonOpenAssetIOManagerInterfaceCore:
         _context: Context,
         host_session: HostSession,
         success_callback: Callable[[int, EntityReference], Any],
-        _error_callback: Callable[[int, BatchElementError], Any],
+        error_callback: Callable[[int, BatchElementError], Any],
     ) -> None:
         """Register (publish) entities in AYON.
 
@@ -697,6 +697,16 @@ class AyonOpenAssetIOManagerInterfaceCore:
                         # containing a single file. We flag that it's not a
                         # sequence by passing a single string.
                         [file_or_files] = file_or_files
+
+            if not file_or_files:
+                host_session.logger().error(
+                    f"No files found to publish for entity reference '{entity_ref}': "
+                    f"{file_or_files}")
+                error_callback(
+                    idx, BatchElementError(
+                        BatchElementError.ErrorCode.kInvalidPreflightHint,
+                        "No files found to publish."))
+                continue
 
             if not is_workfile:
                 # Execute the AYON Pyblish process.
