@@ -119,8 +119,8 @@ def bootstrap_ayon_core(
         sys.path.append(str(core_addon_vendor_dir))
 
     # Add the dependency packages directory to sys.path if not already present.
-    if ayon_dependency_packages_dir not in sys.path:
-        sys.path.append(ayon_dependency_packages_dir)
+    if str(ayon_dependency_packages_dir) not in sys.path:
+        sys.path.append(str(ayon_dependency_packages_dir))
 
     from . import ayon_core_util
 
