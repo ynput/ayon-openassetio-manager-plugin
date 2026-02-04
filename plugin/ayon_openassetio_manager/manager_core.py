@@ -373,23 +373,21 @@ class AyonOpenAssetIOManagerInterfaceCore:
                 # Frame range:
 
                 if mc_traits.timeDomain.FrameRangedTrait.kId in trait_set:
-                    frame_ranged_trait = (
-                        mc_traits.timeDomain.FrameRangedTrait(traits_data)
-                    )
-                    frame_ranged_trait.setStartFrame(
-                        entity_version["attrib"]["frameStart"]
-                        - entity_version["attrib"]["handleStart"]
-                    )
-                    frame_ranged_trait.setEndFrame(
-                        entity_version["attrib"]["frameEnd"]
-                        + entity_version["attrib"]["handleEnd"]
-                    )
-                    frame_ranged_trait.setInFrame(
-                        entity_version["attrib"]["frameStart"])
-                    frame_ranged_trait.setOutFrame(
-                        entity_version["attrib"]["frameEnd"])
-                    frame_ranged_trait.setFramesPerSecond(
-                        entity_version["attrib"]["fps"])
+                    frame_start = entity_version["attrib"].get("frameStart")
+                    frame_end = entity_version["attrib"].get("frameEnd")
+                    handle_start = entity_version["attrib"].get("handleStart", 0)
+                    handle_end = entity_version["attrib"].get("handleEnd", 0)
+                    fps = entity_version["attrib"].get("fps")
+
+                    if frame_start is not None and frame_end is not None:
+                        frame_ranged_trait = mc_traits.timeDomain.FrameRangedTrait(traits_data)
+                        frame_ranged_trait.setInFrame(frame_start)
+                        frame_ranged_trait.setOutFrame(frame_end)
+                        frame_ranged_trait.setStartFrame(frame_start - handle_start)
+                        frame_ranged_trait.setEndFrame(frame_end + handle_end)
+
+                        if fps is not None:
+                            frame_ranged_trait.setFramesPerSecond(fps)
 
                 # Colour space
                 if mc_traits.color.OCIOColorManagedTrait.kId in trait_set:
