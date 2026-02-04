@@ -266,7 +266,7 @@ def query_staging_dir_for_entity(entity_info: ayon.EntityInfo) -> str:
 def publish_representation(
     entity_info: ayon.EntityInfo,
     instance_data: dict,
-    files: list[str],
+    file_or_files: str | list[str],
     logger: LoggerInterface,
 ) -> list[str]:
     """Execute AYON's pyblish publishing process.
@@ -278,8 +278,8 @@ def publish_representation(
         entity_info (ayon.EntityInfo): The entity information.
         instance_data (dict): The instance data for the representation
             to publish.
-        files (list[str]): List of file paths to include in
-            the representation.
+        file_or_files (str | list[str]): List of file paths to include
+            in the representation, or a single file path.
         logger (LoggerInterface): Logger to use for logging.
 
     Returns:
@@ -304,7 +304,7 @@ def publish_representation(
         "tags": [],
         "name": entity_info.representation_name,
         "ext": entity_info.representation_name,
-        "files": files,
+        "files": file_or_files,
     }
     for key in optional_representation_data_keys:
         if key in instance_data:
@@ -314,6 +314,9 @@ def publish_representation(
         representation_data["colorspaceData"] = {
             "colorspace": instance_data["colorspace"]
         }
+
+    thumbnailSource = file_or_files[0] if isinstance(
+        file_or_files, list) else file_or_files
 
     instance = pyblish_ctx.create_instance(entity_info.product_name)
     instance.data.update(
@@ -329,7 +332,7 @@ def publish_representation(
             "families": [entity_info.product_type],
             "comment": entity_info.comment,
             "representations": [representation_data],
-            "thumbnailSource": files[0],
+            "thumbnailSource": thumbnailSource,
             "transientData": {},
         }
     )
