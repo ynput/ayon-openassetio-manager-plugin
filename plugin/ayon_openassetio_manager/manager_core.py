@@ -648,16 +648,21 @@ class AyonOpenAssetIOManagerInterfaceCore:
                     if not frame_ranged_trait.isImbued():
                         file_or_files.append(path.name)
                     else:
-                        # If the FrameRangedTrait is imbued, we assume the file
-                        # path is a template path that we must fill in with
-                        # frame numbers to generate a list of files.
-                        # TODO(DF): We further assume that the frame token is
+                        # TODO(DF): We assume that the frame token is
                         #  in the file name(s), rather than in a directory
                         #  name.
                         frame_token = self.__create_frame_token(
                             entity_info.project_name, host_session
                         )
-                        if (
+
+                        if frame_token not in path.name:
+                            # Assume a single file, i.e. not a file
+                            # sequence. In particular, a video file may
+                            # have a frame range, but is only a single
+                            # file.
+                            file_or_files.append(path.name)
+
+                        elif (
                             frame_ranged_trait.getStartFrame() is None
                             or frame_ranged_trait.getEndFrame() is None
                         ):
