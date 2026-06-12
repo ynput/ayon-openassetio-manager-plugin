@@ -125,7 +125,7 @@ def query_identity_for_entity_refs(  # noqa: C901, PLR0912, PLR0914
         # TODO(DF): data may have an "error" key, which should be handled.
         non_workfile_entity_identities = response.data
 
-        for idx, entity_identity in zip(  # noqa: B905
+        for idx, entity_identity in zip(
                 non_workfile_idxs,
                 non_workfile_entity_identities,
             ):
@@ -165,7 +165,7 @@ def query_identity_for_entity_refs(  # noqa: C901, PLR0912, PLR0914
                 )
 
                 if entity_info.workfile_name is not None:
-                    workfile_info = next(
+                    workfile_info: dict[str, Any] = next(
                         (
                             wf for wf in workfiles_info
                             if wf["name"] == entity_info.workfile_name
@@ -173,7 +173,8 @@ def query_identity_for_entity_refs(  # noqa: C901, PLR0912, PLR0914
                         {},
                     )
                 else:
-                    # If no workfile name is specified, just take the first one.
+                    # If no workfile name is specified,
+                    # just take the first one.
                     workfile_info = next(workfiles_info, {})
 
                 if workfile_id := workfile_info.get("id"):
@@ -300,7 +301,7 @@ def publish_representation(
         "frameEnd",
         "stagingDir",
     ]
-    representation_data = {
+    representation_data: dict[str, Any] = {
         "tags": [],
         "name": entity_info.representation_name,
         "ext": entity_info.representation_name,
@@ -483,6 +484,9 @@ def _creator_for_entity(entity_info: ayon.EntityInfo) -> Creator:
     Returns:
         Creator: The Creator instance.
 
+    Raises:
+        ValueError: If the entity info does not contain a product type.
+
     """
     project_settings = get_project_settings(entity_info.project_name)
     create_context = CreateContext(
@@ -492,6 +496,9 @@ def _creator_for_entity(entity_info: ayon.EntityInfo) -> Creator:
         discover_publish_plugins=False,
     )
     create_context.reset_current_context()
+    if entity_info.product_type is None:
+        msg = "Entity info must contain a product type."
+        raise ValueError(msg)
     return _OpenAssetIOCreator(
         entity_info.product_type, project_settings,
         create_context, headless=True

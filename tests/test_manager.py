@@ -1,3 +1,4 @@
+"""Tests for the Ayon OpenAssetIO Manager implementation."""
 import json
 import operator
 import os
@@ -7,33 +8,42 @@ import urllib.parse
 
 import openassetio
 import openassetio.access
-import openassetio_mediacreation.traits as mc_traits
 import openassetio_mediacreation.specifications as mc_specs
-from openassetio.errors import BatchElementError
-from openassetio.trait import TraitsData
-from openassetio.hostApi import Manager
+import openassetio_mediacreation.traits as mc_traits
 from openassetio import access
+from openassetio.errors import BatchElementError
+from openassetio.hostApi import Manager
+from openassetio.trait import TraitsData
 from openassetio.utils import FileUrlPathConverter
 
 from .conftest import ProjectInfo
 
 
-def test_manager_discovery(plugin_path_env, ayon_connection_env, manager_factory, printer):
-    printer("testing if plugin can be discovered " f"in {os.getenv('OPENASSETIO_PLUGIN_PATH')}")
+def test_manager_discovery(
+        plugin_path_env,
+        ayon_connection_env,
+        manager_factory,
+        printer) -> None:
+    """Test that the Ayon OpenAssetIO Manager plugin can be discovered."""
+    printer(
+        "testing if plugin can be discovered "
+        f"in {os.getenv('OPENASSETIO_PLUGIN_PATH')}")
 
     managers = manager_factory.availableManagers()
-    assert "io.ynput.ayon.openassetio.manager" in managers.keys()
+    assert "io.ynput.ayon.openassetio.manager" in managers
 
 
-def test_manager_creation(manager):
+def test_manager_creation(manager) -> None:
+    """Test that the Ayon OpenAssetIO Manager can be created."""
     assert manager is not None
 
 
-def test_manager_identity(manager):
+def test_manager_identity(manager) -> None:
+    """Test that the Ayon OpenAssetIO Manager has the correct identity."""
     assert manager.identifier() == "io.ynput.ayon.openassetio.manager.interface"
 
 
-def test_entity_reference_valid(manager, printer):
+def test_entity_reference_valid(manager, printer) -> None:
     printer("testing if entity reference is valid based on prefix")
     # manager: openassetio.hostApi.Manager
     assert manager.isEntityReferenceString("ayon+entity://asset/1234")
@@ -41,8 +51,10 @@ def test_entity_reference_valid(manager, printer):
     assert not manager.isEntityReferenceString("http://foo.bar.baz")
 
 
-class Test_managementPolicy:
-    def test_when_read_unsupported_then_not_managed(self, project: ProjectInfo, manager: Manager):
+class TestManagementPolicy:
+    """Tests for the Ayon OpenAssetIO Manager managementPolicy method."""
+    def test_when_read_unsupported_then_not_managed(
+            self, project: ProjectInfo, manager: Manager) -> None:
         context = manager.createContext()
         trait_set = {
             mc_traits.threeDimensional.IESProfileTrait.kId,
@@ -54,7 +66,8 @@ class Test_managementPolicy:
 
         assert policy_traits_data.traitSet() == set()
 
-    def test_when_read_supported_then_managed(self, project: ProjectInfo, manager: Manager):
+    def test_when_read_supported_then_managed(
+            self, project: ProjectInfo, manager: Manager) -> None:
         context = manager.createContext()
         trait_set = {
             mc_traits.content.LocatableContentTrait.kId,
@@ -77,7 +90,7 @@ class Test_managementPolicy:
 
     def test_when_manager_driven_unsupported_then_not_managed(
         self, project: ProjectInfo, manager: Manager
-    ):
+    ) -> None:
         context = manager.createContext()
         trait_set = {
             mc_traits.timeDomain.FrameRangedTrait.kId,
@@ -91,7 +104,7 @@ class Test_managementPolicy:
 
     def test_when_manager_driven_supported_then_managed(
         self, project: ProjectInfo, manager: Manager
-    ):
+    ) -> None:
         context = manager.createContext()
         trait_set = {
             mc_traits.content.LocatableContentTrait.kId,
@@ -108,7 +121,7 @@ class Test_managementPolicy:
 
     def test_when_required_for_publishing_unsupported_then_not_managed(
         self, project: ProjectInfo, manager: Manager
-    ):
+    ) -> None:
         context = manager.createContext()
         trait_set = {
             mc_traits.timeDomain.FrameRangedTrait.kId,
@@ -122,7 +135,7 @@ class Test_managementPolicy:
 
     def test_when_required_for_publishing_supported_then_managed(
         self, project: ProjectInfo, manager: Manager
-    ):
+    ) -> None:
         context = manager.createContext()
         trait_set = {
             mc_traits.content.LocatableContentTrait.kId,
@@ -138,7 +151,7 @@ class Test_managementPolicy:
         }
 
 
-def test_entity_reference_exists(project, manager):
+def test_entity_reference_exists(project, manager) -> None:
     project: ProjectInfo
     context = manager.createContext()
 
@@ -172,10 +185,11 @@ def test_entity_reference_exists(project, manager):
     assert results[1] is False
 
 
-class Test_resolve:
+class TestResolve:
+    """Tests for the Ayon OpenAssetIO Manager resolve method."""
     def test_when_resolving_existing_image_sequence_then_available_fields_returned(
         self, project: ProjectInfo, manager
-    ):
+    ) -> None:
         context = manager.createContext()
 
         trait_set = {
@@ -199,10 +213,14 @@ class Test_resolve:
             context=context,
         )
 
-        locatable_content_trait = mc_traits.content.LocatableContentTrait(result)
-        frame_ranged_trait = mc_traits.timeDomain.FrameRangedTrait(result)
-        ocio_color_managed_trait = mc_traits.color.OCIOColorManagedTrait(result)
-        ies_profile_trait = mc_traits.threeDimensional.IESProfileTrait(result)
+        locatable_content_trait = mc_traits.content.LocatableContentTrait(
+            result)
+        frame_ranged_trait = mc_traits.timeDomain.FrameRangedTrait(
+            result)
+        ocio_color_managed_trait = mc_traits.color.OCIOColorManagedTrait(
+            result)
+        ies_profile_trait = mc_traits.threeDimensional.IESProfileTrait(
+            result)
 
         assert locatable_content_trait.isImbued()
         assert frame_ranged_trait.isImbued()
@@ -240,7 +258,7 @@ class Test_resolve:
 
     def test_when_resolving_existing_workfile_then_available_fields_returned(
         self, project: ProjectInfo, manager
-    ):
+    ) -> None:
         context = manager.createContext()
 
         trait_set = {
@@ -275,10 +293,11 @@ class Test_resolve:
         assert locatable_content_trait.getLocation() == f"file://{workfile_path}"
 
 
-class Test_preflight:
+class TestPreflight:
+    """Tests for the Ayon OpenAssetIO Manager preflight method."""
     def test_when_publishing_to_representation_then_representation_ref_returned(
         self, project: ProjectInfo, manager: Manager
-    ):
+    ) -> None:
         context = manager.createContext()
 
         traits_hint = (
@@ -312,7 +331,7 @@ class Test_preflight:
 
     def test_when_publishing_with_metadata_to_representation_then_representation_ref_returned(
         self, project: ProjectInfo, manager: Manager
-    ):
+    ) -> None:
         context = manager.createContext()
 
         traits_hint = (
@@ -355,7 +374,7 @@ class Test_preflight:
 
     def test_when_publishing_to_workfile_then_workfile_ref_returned(
         self, project: ProjectInfo, manager: Manager
-    ):
+    ) -> None:
         context = manager.createContext()
 
         traits_hint = mc_specs.application.WorkfileSpecification.create().traitsData()
@@ -386,18 +405,18 @@ class Test_preflight:
         assert str(working_ref) == expected_ref
 
 
-class Test_resolve_for_manager_driven:
+class TestResolveForManagerDriven:
     def test_when_publishing_to_existing_representation_then_staging_path_returned(
         self, project: ProjectInfo, manager
-    ):
+    ) -> None:
         # setup
 
         context = manager.createContext()
 
-        traitsHint = (
+        traits_hint = (
             mc_specs.twoDimensional.PlanarBitmapImageResourceSpecification.create().traitsData()
         )
-        mc_traits.timeDomain.FrameRangedTrait.imbueTo(traitsHint)
+        mc_traits.timeDomain.FrameRangedTrait.imbueTo(traits_hint)
 
         working_ref = manager.preflight(
             entityReference=manager.createEntityReference(
@@ -408,7 +427,7 @@ class Test_resolve_for_manager_driven:
                 f"version={project.version.name}&"
                 f"representation={project.representation.name}"
             ),
-            traitsHint=traitsHint,
+            traitsHint=traits_hint,
             publishAccess=access.PublishingAccess.kWrite,
             context=context,
         )
@@ -449,7 +468,7 @@ class Test_resolve_for_manager_driven:
 
     def test_when_publishing_to_workfile_then_working_path_returned(
         self, project: ProjectInfo, manager: Manager
-    ):
+    ) -> None:
         context = manager.createContext()
 
         traits_hint = mc_specs.application.WorkfileSpecification.create().traitsData()
@@ -504,7 +523,7 @@ class Test_resolve_for_manager_driven:
 
     def test_when_publishing_to_existing_workfile_type_then_workfile_file_version_updated(
         self, project: ProjectInfo, manager: Manager
-    ):
+    ) -> None:
         context = manager.createContext()
 
         traits_hint = mc_specs.application.WorkfileSpecification.create().traitsData()
@@ -541,7 +560,7 @@ class Test_resolve_for_manager_driven:
 
     def test_when_publishing_to_existing_workfile_then_workfile_name_file_version_updated(
         self, project: ProjectInfo, manager: Manager
-    ):
+    ) -> None:
         context = manager.createContext()
 
         traits_hint = mc_specs.application.WorkfileSpecification.create().traitsData()
@@ -579,10 +598,11 @@ class Test_resolve_for_manager_driven:
         assert file_path == project.workfile_path.replace("v001", "v002")
 
 
-class Test_register:
+class TestRegister:
+    """Tests for the Ayon OpenAssetIO Manager register method."""
     def test_when_publishing_to_existing_representation_then_creates_new_version(
         self, project: ProjectInfo, manager: Manager
-    ):
+    ) -> None:
         # setup
 
         context = manager.createContext()
@@ -652,7 +672,7 @@ class Test_register:
 
     def test_when_publishing_to_entirely_new_representation_then_creates_new_hierarchy(
         self, project: ProjectInfo, manager: Manager
-    ):
+    ) -> None:
         # setup
 
         context = manager.createContext()
@@ -738,7 +758,7 @@ class Test_register:
 
     def test_when_publishing_to_new_workfile_then_creates_new_workfile_entry(
         self, project: ProjectInfo, manager: Manager
-    ):
+    ) -> None:
         # setup
         context = manager.createContext()
 
@@ -813,9 +833,15 @@ class Test_register:
         assert final_url == manager_driven_url
 
 
-def raise_batch_element_error(idx: int, error: BatchElementError):
-    """
+def raise_batch_element_error(idx: int, error: BatchElementError) -> None:
+    """Raise the given BatchElementError.
+
     Utility to work around current lack of exception-throwing
     convenience signatures in some OpenAssetIO methods.
+
+    Args:
+        idx (int): The index of the element that caused the error.
+        error (BatchElementError): The error to raise.
+
     """
     raise error

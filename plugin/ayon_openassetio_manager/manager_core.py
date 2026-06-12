@@ -3,15 +3,14 @@ from __future__ import annotations
 
 import pathlib
 from pathlib import Path
-from typing import Any, Callable, Union
 from threading import Lock
-from cachetools import TTLCache
+from typing import Any, Callable, Optional, Union, cast
 
 import ayon_api
-
 import openassetio
 import openassetio_mediacreation.traits as mc_traits
 from ayon_core import pipeline
+from cachetools import TTLCache
 from openassetio import Context, EntityReference, access
 from openassetio.errors import BatchElementError
 from openassetio.managerApi import HostSession, ManagerStateBase
@@ -115,7 +114,7 @@ class AyonOpenAssetIOManagerInterfaceCore:
         """
         policies = [TraitsData() for _ in trait_sets]
 
-        for trait_set, policy in zip(trait_sets, policies):  # noqa: B905
+        for trait_set, policy in zip(trait_sets, policies):
             # TODO(DF): We should also disallow resolving/publishing traits
             #  based on the other traits in the trait set (or rather, based on
             #  defined Specifications). At the moment we're saying e.g. that we
@@ -195,9 +194,9 @@ class AyonOpenAssetIOManagerInterfaceCore:
 
         for idx, rep in enumerate(identities):
             if rep["entities"]:
-                success_callback(idx, True)
+                success_callback(idx, True)  # noqa: FBT003
             else:
-                success_callback(idx, False)
+                success_callback(idx, False)  # noqa: FBT003
 
     def resolve(  # noqa: PLR0913, PLR0917
         self,
@@ -274,7 +273,6 @@ class AyonOpenAssetIOManagerInterfaceCore:
             - Refactor to reduce complexity.
 
         """
-
         # Cache results for a few seconds to avoid hammering the AYON server
         cache_key = (tuple(str(ref) for ref in entity_references), frozenset(trait_set))
 
@@ -283,7 +281,7 @@ class AyonOpenAssetIOManagerInterfaceCore:
 
         if cached_value is not None:
             for idx, traits_data in enumerate(cached_value):
-                success_callback(idx, cached_value[idx])
+                success_callback(idx, traits_data)
             return
 
         cached_value = [None] * len(entity_references)
@@ -310,13 +308,13 @@ class AyonOpenAssetIOManagerInterfaceCore:
 
             entity_info = ayon.parse_entity_ref(str(entity_references[idx]))
 
-            entity_representation = None
+            entity_representation: Optional[dict[str, Any]] = None
             if representation_id := entity_identity.get("representationId"):
                 entity_representation = ayon_api.get_representation_by_id(
                     entity_info.project_name, representation_id
                 )
 
-            entity_version = None
+            entity_version: Optional[dict[str, dict]] = None
             if version_id := entity_identity.get("versionId"):
                 entity_version = ayon_api.get_version_by_id(
                     entity_info.project_name, version_id)
@@ -392,10 +390,14 @@ class AyonOpenAssetIOManagerInterfaceCore:
                 # Frame range:
 
                 if mc_traits.timeDomain.FrameRangedTrait.kId in trait_set:
-                    frame_start = entity_version["attrib"].get("frameStart")
-                    frame_end = entity_version["attrib"].get("frameEnd")
-                    handle_start = entity_version["attrib"].get("handleStart", 0)
-                    handle_end = entity_version["attrib"].get("handleEnd", 0)
+                    frame_start: int = cast(
+                        "int", entity_version["attrib"].get("frameStart"))
+                    frame_end: int = cast(
+                        "int", entity_version["attrib"].get("frameEnd"))
+                    handle_start: int = entity_version["attrib"].get(
+                            "handleStart", 0)
+                    handle_end: int = entity_version["attrib"].get(
+                            "handleEnd", 0)
                     fps = entity_version["attrib"].get("fps")
 
                     if frame_start is not None and frame_end is not None:
@@ -409,11 +411,11 @@ class AyonOpenAssetIOManagerInterfaceCore:
                             frame_ranged_trait.setFramesPerSecond(fps)
 
                 # Colour space
-                if mc_traits.color.OCIOColorManagedTrait.kId in trait_set:
-                    if colorspace := entity_version["attrib"]["colorSpace"]:
-                        ocio_trait = mc_traits.color.OCIOColorManagedTrait(
-                            traits_data)
-                        ocio_trait.setColorspace(colorspace)
+                if mc_traits.color.OCIOColorManagedTrait.kId in trait_set and (
+                colorspace := entity_version["attrib"]["colorSpace"]):
+                    ocio_trait = mc_traits.color.OCIOColorManagedTrait(
+                        traits_data)
+                    ocio_trait.setColorspace(colorspace)
 
             if traits_data.traitSet():
                 # Add entity info to context for use in UI pre-population, etc.
@@ -490,6 +492,9 @@ class AyonOpenAssetIOManagerInterfaceCore:
                 resolved_path = pathlib.Path(staging_dir)
 
                 resolved_filename = entity_info.product_name
+                if resolved_filename is None:
+                    error_callback(idx, TraitsData())
+                    return
 
                 if entity_info.preflight_data.get("frame_ranged"):
                     frame_token = self.__create_frame_token(
@@ -542,7 +547,7 @@ class AyonOpenAssetIOManagerInterfaceCore:
 
         """
         for idx, (entity_ref, entity_traits_data) in enumerate(
-            zip(target_entity_refs, traits_hints)  # noqa: B905
+            zip(target_entity_refs, traits_hints)
         ):
             entity_info = ayon.parse_entity_ref(str(entity_ref))
 
@@ -609,7 +614,7 @@ class AyonOpenAssetIOManagerInterfaceCore:
             host_session (HostSession): The host session.
             success_callback (Callable[[int, EntityReference], Any]): The
                 success callback.
-            _error_callback (Callable[[int, BatchElementError], Any]): The
+            error_callback (Callable[[int, BatchElementError], Any]): The
                 error callback.
 
         """
@@ -618,7 +623,7 @@ class AyonOpenAssetIOManagerInterfaceCore:
         )
 
         for idx, (entity_ref, entity_traits_data) in enumerate(
-            zip(target_entity_refs, entity_traits_datas)  # noqa: B905
+            zip(target_entity_refs, entity_traits_datas)
         ):
             entity_info = ayon.parse_entity_ref(str(entity_ref))
             is_workfile = entity_info.representation_name is None
@@ -651,15 +656,16 @@ class AyonOpenAssetIOManagerInterfaceCore:
                 instance_data["colorspace"] = colorspace
 
             # Find all the files.
-            file_or_files = []
+            file_or_files: list[str] = []
+            single_file: str | None = None
             if url := mc_traits.content.LocatableContentTrait(
                     entity_traits_data).getLocation():
                 # Path to file, or template for a sequence of files.
-                path = pathlib.Path(self.__fileUrlPathConverter.pathFromUrl(
-                    url))
-
+                path = pathlib.Path(
+                    self.__fileUrlPathConverter.pathFromUrl(url)
+                )
                 if is_workfile:
-                    file_or_files = str(path)
+                    file_or_files = [str(path)]
                 else:
                     # AYON uses "stagingDir" to mean the parent directory that
                     # all the files were written to. This could be the staging
@@ -668,7 +674,6 @@ class AyonOpenAssetIOManagerInterfaceCore:
                     # necessarily - it's just the directory where the output
                     # artifacts can be found.
                     instance_data["stagingDir"] = str(path.parent)
-
                     if not frame_ranged_trait.isImbued():
                         file_or_files.append(path.name)
                     else:
@@ -720,9 +725,9 @@ class AyonOpenAssetIOManagerInterfaceCore:
                         # AYON will complain if we try to pass a "sequence"
                         # containing a single file. We flag that it's not a
                         # sequence by passing a single string.
-                        [file_or_files] = file_or_files
+                        single_file = file_or_files[0]
 
-            if not file_or_files:
+            if not file_or_files or not single_file:
                 host_session.logger().error(
                     f"No files found to publish for entity reference '{entity_ref}': "
                     f"{file_or_files}")
@@ -737,7 +742,7 @@ class AyonOpenAssetIOManagerInterfaceCore:
                 published_ids = ayon_core_util.publish_representation(
                     entity_info,
                     instance_data,
-                    file_or_files,
+                    file_or_files or single_file,
                     host_session.logger(),
                 )
                 # Convert IDs to AYON URIs (i.e. entity references).
@@ -752,7 +757,7 @@ class AyonOpenAssetIOManagerInterfaceCore:
                 ayon_core_util.publish_workfile(
                     entity_info,
                     entity_identities[idx]["entities"][-1],
-                    file_or_files
+                    single_file
                 )
                 file = (
                     file_or_files[0]

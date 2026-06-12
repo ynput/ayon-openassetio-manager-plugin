@@ -1,20 +1,20 @@
 import os
 import pathlib
+import secrets
 import uuid
+from dataclasses import dataclass
 
 import ayon_api
 import pytest
-import secrets
-
 import requests
 from ayon_api.operations import OperationsSession
-from openassetio.log import ConsoleLogger, SeverityFilter
 from openassetio.hostApi import HostInterface, Manager, ManagerFactory
-from openassetio.pluginSystem import PythonPluginSystemManagerImplementationFactory
+from openassetio.log import ConsoleLogger, SeverityFilter
+from openassetio.pluginSystem import (
+    PythonPluginSystemManagerImplementationFactory,
+)
 
 from .utils import create_file_list
-from dataclasses import dataclass
-
 
 AYON_SERVER_URL = "http://localhost:5000"
 AYON_API_KEY = ""
@@ -22,13 +22,13 @@ AYON_BUNDLE_NAME = ""
 
 
 @dataclass
-class IdNamePair(object):
+class IdNamePair:
     id: str
     name: str
 
 
 @dataclass
-class ProjectInfo(object):
+class ProjectInfo:
     project_name: str
     project_code: str
     project_root_folders: dict[str, dict[str, str]]
@@ -354,7 +354,7 @@ def project(tmp_path_factory, printer_session, ayon_connection_env) -> pytest.fi
         "attrib": {
             "template": project_data["anatomy"]["templates"]["publish"][0]["directory"]
             + "/"
-            + project_data["anatomy"]["templates"]["publish"][0]["file"],  # noqa
+            + project_data["anatomy"]["templates"]["publish"][0]["file"],
         },
     }
 
@@ -364,7 +364,7 @@ def project(tmp_path_factory, printer_session, ayon_connection_env) -> pytest.fi
     assert response.status_code == 201
     representation_id = response.json()["id"]
     printer_session(
-        f"Created representation {representation_name} with " f"{len(file_list)} files"
+        f"Created representation {representation_name} with {len(file_list)} files"
     )
 
     # Create a workfile

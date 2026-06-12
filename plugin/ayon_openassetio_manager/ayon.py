@@ -102,10 +102,12 @@ def bootstrap_ayon_core(
                "Please ensure you have run the AYON launcher at least once.")
         raise RuntimeError(msg)
 
-    ayon_dependency_packages_dir /= bundle["dependencyPackages"][sys.platform]
+    plat = platform.system().lower()
+
+    ayon_dependency_packages_dir /= bundle["dependencyPackages"][plat]
     ayon_dependency_packages_dir /= "dependencies"
     if not ayon_dependency_packages_dir.is_dir():
-        msg = (f"AYON dependency packages for platform '{sys.platform}' "
+        msg = (f"AYON dependency packages for platform '{plat}' "
                f"not found at '{ayon_dependency_packages_dir}'. "
                "Please ensure you have run the AYON launcher at least once.")
         raise RuntimeError(msg)
@@ -119,8 +121,8 @@ def bootstrap_ayon_core(
         sys.path.append(str(core_addon_vendor_dir))
 
     # Add the dependency packages directory to sys.path if not already present.
-    if str(ayon_dependency_packages_dir) not in sys.path:
-        sys.path.append(str(ayon_dependency_packages_dir))
+    if ayon_dependency_packages_dir not in sys.path:
+        sys.path.append(ayon_dependency_packages_dir.as_posix())
 
     from . import ayon_core_util
 
@@ -235,6 +237,7 @@ def validate_settings(settings: dict) -> None:
             mag = f"Unknown setting '{key}'"
             raise KeyError(mag)
 
+
 '''
 def management_policy(trait_set: set[str], access: str, library: dict) -> dict:
     """Returns a management policy for the given trait set and access level.
@@ -249,6 +252,7 @@ def management_policy(trait_set: set[str], access: str, library: dict) -> dict:
     """
     return {}
 '''
+
 
 def parse_entity_ref(entity_ref: str) -> EntityInfo:  # noqa: C901
     """Parses a URI identifying an AYON entity.
@@ -320,7 +324,7 @@ def parse_entity_ref(entity_ref: str) -> EntityInfo:  # noqa: C901
         _validate_name(workfile_name)
 
     variant_name = qs.get("variant", [None])[0]
-    if workfile_name is not None:
+    if workfile_name is not None and variant_name is not None:
         _validate_name(variant_name)
 
     comment = qs.get("comment", [None])[0]

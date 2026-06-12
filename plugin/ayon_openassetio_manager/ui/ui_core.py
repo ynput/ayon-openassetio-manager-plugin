@@ -1,34 +1,36 @@
-"""
-Implementation of the AYON OpenAssetIO UI delegate.
-"""
+"""Implementation of the AYON OpenAssetIO UI delegate."""
+from __future__ import annotations
+
 import os
 import pathlib
-
-from qtpy import QtCore, QtWidgets
+from typing import Any, Callable, Optional
 
 import ayon_api
-from ayon_core.tools.context_dialog.window import ContextDialogController, ContextDialog
+from ayon_core.tools.context_dialog.window import (
+    ContextDialog,
+    ContextDialogController,
+)
 from ayon_core.tools.loader import LoaderController
 from ayon_core.tools.loader.ui import LoaderWindow
 from ayon_core.tools.push_to_project import PushToContextController
 from ayon_core.tools.push_to_project.ui import PushToContextSelectWindow
 from ayon_core.tools.workfiles.control import BaseWorkfileController
 from ayon_core.tools.workfiles.widgets import WorkfilesToolWindow
-
-from openassetio import EntityReference, Context
+from openassetio import Context, EntityReference
 from openassetio.managerApi import HostSession
 from openassetio.trait import TraitsData
-
 from openassetio.ui import access
 from openassetio.ui.managerApi import (
-    UIDelegateStateInterface,
     UIDelegateRequest,
+    UIDelegateStateInterface,
 )
-
+from openassetio_mediacreation.traits.application import (
+    ConfigTrait,
+    ManifestTrait,
+    WorkTrait,
+)
 from openassetio_mediacreation.traits.content import LocatableContentTrait
 from openassetio_mediacreation.traits.identity import DisplayNameTrait
-from openassetio_mediacreation.traits.application import WorkTrait, ManifestTrait, ConfigTrait
-from openassetio_mediacreation.traits.twoDimensional import ImageCollectionTrait, ImageTrait
 from openassetio_mediacreation.traits.imaging import CameraTrait
 from openassetio_mediacreation.traits.threeDimensional import (
     GeometryTrait,
@@ -36,19 +38,23 @@ from openassetio_mediacreation.traits.threeDimensional import (
     ShaderTrait,
     SpatialTrait,
 )
+from openassetio_mediacreation.traits.twoDimensional import (
+    ImageCollectionTrait,
+    ImageTrait,
+)
 from openassetio_mediacreation.traits.ui import (
-    TabbedTrait,
-    InPlaceTrait,
-    DetachedTrait,
     BrowserTrait,
+    DetachedTrait,
     EntityProviderTrait,
+    InPlaceTrait,
     SingleUseTrait,
+    TabbedTrait,
 )
 from openassetio_mediacreation.traits.uiPolicy import ManagedTrait
+from qtpy import QtCore, QtWidgets
 
-from .. import ayon, ayon_core_util, manager_core
-from ..ayon_core_util import OpenAssetIOHost
-
+from ayon_openassetio_manager import ayon, ayon_core_util, manager_core
+from ayon_openassetio_manager.ayon_core_util import OpenAssetIOHost
 
 # Mapping of MIME type to file extension/representation name.
 _mime_to_extension = {
@@ -88,7 +94,8 @@ _mime_to_product = {
     "application/vnd.foundry.katana.rig+xml": "camera",
     "application/vnd.foundry.katana.scenegraph-bookmarks+xml": "settings",
     "inode/directory": "assembly",
-    "model/vnd.usd": "usd",  # Interestingly not IANA registered, unlike usda and usdz.
+    "model/vnd.usd": "usd",  # Interestingly not IANA registered,
+                             # unlike usda and usdz.
     "model/vnd.usda": "usd",
     "model/vnd.usdz+zip": "usd",
 }
@@ -96,12 +103,12 @@ _mime_to_product = {
 # Unfortunately, we may need to fall back to knowing the specific host
 # we're working within.
 # TODO(DF): Some hosts may have multiple extensions.
-_host_id_to_mime_type = {"com.foundry.katana.ui": "application/vnd.foundry.katana.project"}
+_host_id_to_mime_type = {
+    "com.foundry.katana.ui": "application/vnd.foundry.katana.project"}
 
 
 class AyonUIDelegateState(UIDelegateStateInterface):
-    """
-    Implementation of the UI state object for the AYON UI delegate.
+    """Implementation of the UI state object for the AYON UI delegate.
 
     The public members of the abstract base class will be exposed to the host
     application. Here, the implementation of the abstract base class methods
@@ -115,54 +122,101 @@ class AyonUIDelegateState(UIDelegateStateInterface):
     # noinspection PyMissingConstructor
     def __init__(
         self,
-        entity_references=None,
-        entity_traits_datas=None,
-        update_request_callback=None,
-        native_data=None,
+        entity_references: Optional[list[EntityReference]] = None,
+        entity_traits_datas: Optional[list[dict]] = None,
+        update_request_callback: Optional[Callable] = None,
+        native_data: Optional[dict] = None,
     ):
+        """Construct the state object."""
         UIDelegateStateInterface.__init__(self)
         self.__entity_references = entity_references or []
         self.__entity_traits_datas = entity_traits_datas or []
         self.__update_request_callback = update_request_callback
         self.__native_data = native_data
 
-    def setEntityReferences(self, entity_references):
+    def setEntityReferences(self, entity_references) -> None:
+        """Set the entity references.
+
+        Args:
+            entity_references (list[EntityReference]): The entity references.
+
+        """
         self.__entity_references = entity_references
 
-    def setEntityTraitsDatas(self, entity_traits_datas):
+    def setEntityTraitsDatas(self, entity_traits_datas) -> None:
+        """Set the entity traits datas.
+
+        Args:
+            entity_traits_datas (list[dict]): The entity traits datas.
+
+        """
         self.__entity_traits_datas = entity_traits_datas
 
-    def setUpdateRequestCallback(self, update_request_callback):
+    def setUpdateRequestCallback(
+            self, update_request_callback: Callable) -> None:
+        """Set the update request callback.
+
+        Args:
+            update_request_callback (Callable): The update request callback.
+
+        """
         self.__update_request_callback = update_request_callback
 
-    def setNativeData(self, native_data):
+    def setNativeData(self, native_data: dict[str, Any]) -> None:
+        """Set the native data.
+
+        Args:
+            native_data (dict[str, Any]): The native data.
+
+        """
         self.__native_data = native_data
 
     # @override
-    def entityReferences(self):
+    def entityReferences(self) -> list[EntityReference]:
+        """Get the entity references.
+
+        Returns:
+            list[EntityReference]: The entity references.
+        """
         return self.__entity_references
 
     # @override
-    def entityTraitsDatas(self):
+    def entityTraitsDatas(self) -> list[TraitsData]:
+        """Get the entity traits datas.
+
+        Returns:
+            list[TraitsData]: The entity traits datas.
+
+        """
         return self.__entity_traits_datas
 
     # @override
-    def nativeData(self):
+    def nativeData(self) -> dict[str, Any]:
+        """Get the native data.
+
+        Returns:
+            dict[str, Any]: The native data.
+
+        """
         return self.__native_data
 
     # @override
-    def updateRequestCallback(self):
+    def updateRequestCallback(self) -> Optional[Callable]:
+        """Get the update request callback.
+
+        Returns:
+            Optional[Callable]: The update request callback.
+
+        """
         return self.__update_request_callback
 
 
 class AyonOpenAssetIOUIDelegateInterfaceCore:
-    """
-    Core implementation of the AyonUIDelegateInterface.
+    """Core implementation of the AyonUIDelegateInterface.
 
     This class contains the actual implementation of the UI delegate interface,
     which relies on the runtime-imported ayon_core module.
     """
-
     __browser_name = "AYON Loader"
     __publish_name = "AYON Publish Context"
 
@@ -174,11 +228,20 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
         _context: Context,
         _hostSession: HostSession,
     ):
-        """
-        Policy for UI request types.
+        """Policy for UI request types.
 
         Hosts can call this to determine early if the UI delegate can
         potentially handle a request of this kind.
+
+        Args:
+            uiTraits (set[str]): The set of UI traits requested.
+            uiAccess (access.UIAccess): The access level requested.
+            context (Context): The context for the request.
+            hostSession (HostSession): The host session.
+
+        Returns:
+            TraitsData: The policy traits data.
+
         """
         policy = TraitsData()
 
@@ -192,7 +255,7 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
             # Host applications may choose to use the display name for window
             # decoration.
             DisplayNameTrait(policy).setName(
-                cls.__browser_name if uiAccess == access.UIAccess.kRead else cls.__publish_name
+                cls.__browser_name if uiAccess == access.UIAccess.kRead else cls.__publish_name  # noqa: E501
             )
 
         return policy
@@ -206,12 +269,22 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
         context: Context,
         hostSession: HostSession,
     ) -> AyonUIDelegateState | None:
-        """
-        Potentially create a UI element suitable for the given parameters.
+        """Potentially create a UI element suitable for the given parameters.
 
         A return value of None indicates that the request is not supported.
-        """
 
+        Args:
+            uiTraits (TraitsData): The traits data for the UI.
+            uiAccess (access.UIAccess): The access level for the UI.
+            uiDelegateRequest (UIDelegateRequest): The UI delegate request.
+            context (Context): The context for the UI.
+            hostSession (HostSession): The host session.
+
+        Returns:
+            AyonUIDelegateState | None: The UI delegate state, or None if
+                the request is not supported.
+
+        """
         # noinspection PyBroadException
         try:
             widget = None
@@ -263,13 +336,14 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
             if DetachedTrait.isImbuedTo(uiTraits):
                 initial_state.setNativeData(widget)
 
-            return initial_state
-
-        except Exception:
+        except Exception:  # noqa: BLE001
             import traceback
 
-            hostSession.logger().error(f"Failed to display AYON UI: {traceback.format_exc()}")
+            hostSession.logger().error(
+                f"Failed to display AYON UI: {traceback.format_exc()}")
             return None
+        else:
+            return initial_state
 
     @classmethod
     def __create_loader(
@@ -279,16 +353,29 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
         context: Context,
         host_session: HostSession,
         state: AyonUIDelegateState,
-    ):
+    ) -> Optional[QtWidgets.QWidget]:
+        """Create a widget suitable for loading workfiles or representations.
+
+        Args:
+            ui_traits (TraitsData): The traits data for the UI.
+            request (UIDelegateRequest): The UI delegate request.
+            context (Context): The context for the UI.
+            host_session (HostSession): The host session.
+            state (AyonUIDelegateState): The UI delegate state.
+
+        Returns:
+            Optional[QtWidgets.QWidget]: The created widget, or None if
+                creation failed.
+
         """
-        Create a widget suitable for loading workfiles or representations.
-        """
-        if cls.__is_workfile_request(request.entityTraitsDatas(), host_session):
-            return cls.__create_workfile_loader(ui_traits, request, context, host_session, state)
-        else:
-            return cls.__create_representation_loader(
-                ui_traits, request, context, host_session, state
-            )
+        if cls.__is_workfile_request(
+                request.entityTraitsDatas(), host_session):
+            return cls.__create_workfile_loader(
+                ui_traits, request, context, host_session, state)
+
+        return cls.__create_representation_loader(
+            ui_traits, request, context, host_session, state
+        )
 
     @classmethod
     def __create_publisher(
@@ -299,17 +386,29 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
         host_session: HostSession,
         state: AyonUIDelegateState,
     ):
+        """Create a widget for publishing workfiles or representations.
+
+        Args:
+            ui_traits (TraitsData): The traits data for the UI.
+            request (UIDelegateRequest): The UI delegate request.
+            context (Context): The context for the UI.
+            host_session (HostSession): The host session.
+            state (AyonUIDelegateState): The UI delegate state.
+
+        Returns:
+            Optional[QtWidgets.QWidget]: The created widget, or None if
+                creation failed.
+
         """
-        Create a widget suitable for publishing workfiles or representations.
-        """
-        if cls.__is_workfile_request(request.entityTraitsDatas(), host_session):
+        if cls.__is_workfile_request(
+                request.entityTraitsDatas(), host_session):
             return cls.__create_workfile_publisher(
                 ui_traits, request, context, host_session, state
             )
-        else:
-            return cls.__create_representation_publisher(
-                ui_traits, request, context, host_session, state
-            )
+
+        return cls.__create_representation_publisher(
+            ui_traits, request, context, host_session, state
+        )
 
     @classmethod
     def __create_workfile_loader(
@@ -320,10 +419,24 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
         host_session: HostSession,
         state: AyonUIDelegateState,
     ):
+        """Create a widget suitable for loading workfiles.
+
+        Args:
+            ui_traits (TraitsData): The traits data for the UI.
+            request (UIDelegateRequest): The UI delegate request.
+            context (Context): The context for the UI.
+            host_session (HostSession): The host session.
+            state (AyonUIDelegateState): The UI delegate state.
+
+        Returns:
+            Optional[QtWidgets.QWidget]: The created widget, or None if
+                creation failed.
+
         """
-        Create a widget suitable for loading workfiles.
-        """
-        entity_infos = [ayon.parse_entity_ref(str(ref)) for ref in request.entityReferences()]
+        entity_infos = [
+            ayon.parse_entity_ref(str(ref))
+            for ref in request.entityReferences()
+        ]
 
         entity_info = ayon.EntityInfo(
             project_name=cls.__initial_project_name(entity_infos, context),
@@ -335,7 +448,8 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
         )
 
         if entity_info.workfile_name is None:
-            host_session.logger().warning("No file extension set for the workfiles browser.")
+            host_session.logger().warning(
+                "No file extension set for the workfiles browser.")
             return None
 
         # We require at least a project name to be set for the workfiles
@@ -353,14 +467,16 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
             entity_info.task_name = selected_context["task_name"]
 
         if entity_info.project_name is None:
-            host_session.logger().warning("No project name set for the workfiles browser.")
+            host_session.logger().warning(
+                "No project name set for the workfiles browser.")
             return None
 
         # The workfiles browser requires a file extension. The host will report
         # the entity_info.workfile_name as the file extension.
         host = OpenAssetIOHost(entity_info)
 
-        return WorkfileLoaderWidget(ui_traits, request, state, BaseWorkfileController(host))
+        return WorkfileLoaderWidget(
+            ui_traits, request, state, BaseWorkfileController(host))
 
     @classmethod
     def __create_representation_loader(
@@ -371,10 +487,23 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
         _host_session: HostSession,
         state: AyonUIDelegateState,
     ):
+        """Create a widget suitable for loading representations.
+
+        Args:
+            ui_traits (TraitsData): The traits data for the UI.
+            request (UIDelegateRequest): The UI delegate request.
+            context (Context): The context for the UI.
+            _host_session (HostSession): The host session.
+            state (AyonUIDelegateState): The UI delegate state.
+
+        Returns:
+            RepresentationLoaderWidget: The created widget.
+
         """
-        Create a widget suitable for loading representations.
-        """
-        entity_infos = [ayon.parse_entity_ref(str(ref)) for ref in request.entityReferences()]
+        entity_infos = [
+            ayon.parse_entity_ref(str(ref))
+            for ref in request.entityReferences()
+        ]
 
         entity_info = ayon.EntityInfo(
             project_name=cls.__initial_project_name(entity_infos, context),
@@ -382,12 +511,10 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
             task_name=cls.__initial_task_name(entity_infos),
         )
 
-        if entity_info is not None:
-            host = OpenAssetIOHost(entity_info)
-        else:
-            host = None
-
-        return RepresentationLoaderWidget(ui_traits, request, state, LoaderController(host))
+        host = OpenAssetIOHost(
+            entity_info) if entity_info is not None else None
+        return RepresentationLoaderWidget(
+            ui_traits, request, state, LoaderController(host))
 
     @classmethod
     def __create_representation_publisher(
@@ -398,16 +525,32 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
         host_session: HostSession,
         state: AyonUIDelegateState,
     ):
+        """Create a widget suitable for publishing representations.
+
+        Args:
+            ui_traits (TraitsData): The traits data for the UI.
+            request (UIDelegateRequest): The UI delegate request.
+            context (Context): The context for the UI.
+            host_session (HostSession): The host session.
+            state (AyonUIDelegateState): The UI delegate state.
+
+        Returns:
+            Optional[QtWidgets.QWidget]: The created widget, or None if
+                creation failed.
+
         """
-        Create a widget suitable for publishing representations.
-        """
-        entity_infos = [ayon.parse_entity_ref(str(ref)) for ref in request.entityReferences()]
+        entity_infos = [
+            ayon.parse_entity_ref(str(ref))
+            for ref in request.entityReferences()
+        ]
         entity_traits_datas = request.entityTraitsDatas()
 
         # Calculate a product type, required for publishing.
-        product_type = cls.__initial_product_type(entity_infos, entity_traits_datas)
+        product_type = cls.__initial_product_type(
+            entity_infos, entity_traits_datas)
         if product_type is None:
-            host_session.logger().warning("No product type found for the publish browser.")
+            host_session.logger().warning(
+                "No product type found for the publish browser.")
             return None
 
         # Calculate a representation name, required for publishing.
@@ -415,7 +558,8 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
             entity_infos, entity_traits_datas, host_session
         )
         if representation_name is None:
-            host_session.logger().warning("No representation name found for the publish browser.")
+            host_session.logger().warning(
+                "No representation name found for the publish browser.")
             return None
 
         project_name = cls.__initial_project_name(entity_infos, context)
@@ -434,15 +578,13 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
             comment=comment,
         )
 
-        window = RepresentationPublishWidget(
+        return RepresentationPublishWidget(
             entity_info,
             ui_traits,
             request,
             state,
             RepresentationPublishController(entity_info),
         )
-
-        return window
 
     @classmethod
     def __create_workfile_publisher(
@@ -453,10 +595,24 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
         host_session: HostSession,
         state: AyonUIDelegateState,
     ):
+        """Create a widget suitable for publishing workfiles.
+
+        Args:
+            ui_traits (TraitsData): The traits data for the UI.
+            request (UIDelegateRequest): The UI delegate request.
+            context (Context): The context for the UI.
+            host_session (HostSession): The host session.
+            state (AyonUIDelegateState): The UI delegate state.
+
+        Returns:
+            Optional[QtWidgets.QWidget]: The created widget, or None if
+                creation failed.
+
         """
-        Create a widget suitable for publishing workfiles.
-        """
-        entity_infos = [ayon.parse_entity_ref(str(ref)) for ref in request.entityReferences()]
+        entity_infos = [
+            ayon.parse_entity_ref(str(ref))
+            for ref in request.entityReferences()
+        ]
 
         # For publishing, the workfile name is the same as a representation
         # name, i.e. a file extension - the file name will be generated.
@@ -464,7 +620,8 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
             entity_infos, request.entityTraitsDatas(), host_session
         )
         if workfile_name is None:
-            host_session.logger().warning("No workfile name found for the publish browser.")
+            host_session.logger().warning(
+                "No workfile name found for the publish browser.")
             return None
 
         entity_info = ayon.EntityInfo(
@@ -483,14 +640,14 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
         )
 
     @staticmethod
-    def __is_workfile_request(entity_traits_datas: list[TraitsData], host_session: HostSession):
-        """
-        Determine if we're dealing with workfiles or representations.
+    def __is_workfile_request(
+            entity_traits_datas: list[TraitsData], host_session: HostSession):
+        """Determine if we're dealing with workfiles or representations.
 
         We have three cases:
-        1. Reading/publishing a non-workfile i.e. a representation.
-        2. Reading/publishing a workfile as a representation.
-        3. Reading/publishing an in-progress workfile.
+            1. Reading/publishing a non-workfile i.e. a representation.
+            2. Reading/publishing a workfile as a representation.
+            3. Reading/publishing an in-progress workfile.
 
         For reading, the the workfiles browser has a toggle to allow
         browsing published (representation) workfiles vs. registered
@@ -503,9 +660,19 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
         project/script/scene, and is instead something that should be treated
         as a representation.
 
-        TODO(DF): I think the correct thing to do is to allow the user to choose
-         between workfile and representation in the UI. But there are currently no
-         off-the-shelf AYON widgets for this.
+        TODO(DF): I think the correct thing to do is to allow the user to
+            choose between workfile and representation in the UI. But there
+            are currently no off-the-shelf AYON widgets for this.
+
+        Args:
+            entity_traits_datas (list[TraitsData]): The traits data for the
+            host_session (HostSession): The host session.
+
+        Returns:
+            bool: True if we're dealing with workfiles,
+                False for representations.
+
+
         """
         for traits_data in entity_traits_datas:
             # First condition to be a workfile is that the WorkTrait is imbued.
@@ -519,17 +686,29 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
             # not match the host's MIME type, then it is not an AYON workfile.
             target_mime_type = LocatableContentTrait(traits_data).getMimeType()
             if target_mime_type is not None:
-                host_mime_type = _host_id_to_mime_type.get(host_session.host().identifier())
-                if host_mime_type is not None:
-                    if target_mime_type != host_mime_type:
-                        return False
+                host_mime_type = _host_id_to_mime_type.get(
+                    host_session.host().identifier())
+                if (
+                        host_mime_type is not None
+                        and target_mime_type != host_mime_type
+                ):
+                    return False
 
         return True
 
     @staticmethod
-    def __initial_project_name(entity_infos: list[ayon.EntityInfo], context: Context):
-        """
-        Attempt to determine an initial target project name.
+    def __initial_project_name(
+            entity_infos: list[ayon.EntityInfo],
+            context: Context) -> Optional[str]:
+        """Attempt to determine an initial target project name.
+
+        Args:
+            entity_infos (list[ayon.EntityInfo]): The list of entity infos.
+            context (Context): The OpenAssetIO context.
+
+        Returns:
+            Optional[str]: The initial project name, or None if not found.
+
         """
         for entity_info in entity_infos:
             if project_name := entity_info.project_name:
@@ -541,7 +720,7 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
         if project_name := manager_state.settings.get("AYON_PROJECT_NAME"):
             return project_name
 
-        if entity_info := manager_state.most_recent_resolved_entity_info:
+        if entity_info := manager_state.most_recent_resolved_entity_info:  # noqa: SIM102
             if project_name := entity_info.project_name:
                 return project_name
 
@@ -551,8 +730,14 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
     def __initial_folder_path(
         entity_infos: list[ayon.EntityInfo]
     ):
-        """
-        Attempt to determine an initial target folder path.
+        """Attempt to determine an initial target folder path.
+
+        Args:
+            entity_infos (list[ayon.EntityInfo]): The list of entity infos.
+
+        Returns:
+            Optional[str]: The initial folder path, or None if not found.
+
         """
         for entity_info in entity_infos:
             if folder_path := entity_info.path:
@@ -563,9 +748,15 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
     @staticmethod
     def __initial_task_name(
         entity_infos: list[ayon.EntityInfo],
-    ):
-        """
-        Attempt to determine an initial target task name.
+    ) -> Optional[str]:
+        """Attempt to determine an initial target task name.
+
+        Args:
+            entity_infos (list[ayon.EntityInfo]): The list of entity infos.
+
+        Returns:
+            Optional[str]: The initial task name, or None if not found.
+
         """
         for entity_info in entity_infos:
             if task_name := entity_info.task_name:
@@ -574,12 +765,19 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
         return None
 
     @staticmethod
-    def __initial_product_type(
+    def __initial_product_type(  # noqa: C901, PLR0911, PLR0912
         entity_infos: list[ayon.EntityInfo],
         entity_traits_datas: list[TraitsData],
-    ):
-        """
-        Attempt to determine an initial target product type.
+    ) -> Optional[str]:
+        """Attempt to determine an initial target product type.
+
+        Args:
+            entity_infos (list[ayon.EntityInfo]): The list of entity infos.
+            entity_traits_datas (list[TraitsData]): The list of traits data.
+
+        Returns:
+            Optional[str]: The initial product type, or None if not found.
+
         """
         # Assume if an entity reference is provided, then it is the source of
         # truth.
@@ -597,7 +795,9 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
         for traits_data in entity_traits_datas:
             if ConfigTrait.isImbuedTo(traits_data):
                 return "config"
-            if ImageCollectionTrait.isImbuedTo(traits_data) or ImageTrait.isImbuedTo(traits_data):
+            if (
+                    ImageCollectionTrait.isImbuedTo(traits_data)
+                    or ImageTrait.isImbuedTo(traits_data)):
                 return "render"
             if CameraTrait.isImbuedTo(traits_data):
                 return "camera"
@@ -605,7 +805,9 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
                 return "assembly"
             if GeometryTrait.isImbuedTo(traits_data):
                 return "model"
-            if LightingTrait.isImbuedTo(traits_data) or ShaderTrait.isImbuedTo(traits_data):
+            if (
+                    LightingTrait.isImbuedTo(traits_data) or
+                    ShaderTrait.isImbuedTo(traits_data)):
                 return "look"
             if SpatialTrait.isImbuedTo(traits_data):
                 return "layout"
@@ -622,23 +824,41 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
         return None
 
     @staticmethod
-    def __initial_variant_name(entity_infos: list[ayon.EntityInfo]):
-        """
-        Attempt to determine an initial target product variant.
-        """
-        for entity_info in entity_infos:
-            if entity_info.variant_name:
-                return entity_info.variant_name
+    def __initial_variant_name(
+            entity_infos: list[ayon.EntityInfo]) -> Optional[str]:
+        """Attempt to determine an initial target product variant.
 
-        return None
+        Args:
+            entity_infos (list[ayon.EntityInfo]): The list of entity infos.
+
+        Returns:
+            Optional[str]: The initial variant name, or None if not found.
+
+        """
+        return next(
+            (
+                entity_info.variant_name
+                for entity_info in entity_infos
+                if entity_info.variant_name
+            ),
+            None,
+        )
 
     @staticmethod
     def __initial_product_name(
         entity_infos: list[ayon.EntityInfo],
         context: Context,
-    ):
-        """
-        Attempt to determine an initial target product name.
+    ) -> Optional[str]:
+        """Attempt to determine an initial target product name.
+
+        Args:
+            entity_infos (list[ayon.EntityInfo]): The list of entity infos.
+            context (Context): The OpenAssetIO context.
+
+        Returns:
+            Optional[str]: The initial product name, or None if not found.
+
+
         """
         for entity_info in entity_infos:
             if entity_info.product_name:
@@ -647,28 +867,38 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
         # noinspection PyTypeChecker
         manager_state: manager_core.AyonManagerState = context.managerState
 
-        if entity_info := manager_state.most_recent_resolved_entity_info:
+        if entity_info := manager_state.most_recent_resolved_entity_info:  # noqa: SIM102
             if entity_info.product_name:
                 return entity_info.product_name
 
         return None
 
     @staticmethod
-    def __initial_representation_name(
+    def __initial_representation_name(  # noqa: C901, PLR0911, PLR0912
         entity_infos: list[ayon.EntityInfo],
         entity_traits_datas: list[TraitsData],
         host_session: HostSession,
-    ):
+    ) -> Optional[str]:
+        """Attempt to determine an initial target representation name.
+
+        Args:
+            entity_infos (list[ayon.EntityInfo]): The list of entity infos.
+            entity_traits_datas (list[TraitsData]): The list of traits data.
+            host_session (HostSession): The host session.
+
+        Returns:
+            Optional[str]: The initial representation name,
+                or None if not found.
+
         """
-        Attempt to determine an initial target representation name.
-        """
-        # First check if we've been given an entity reference as a starting point.
-        # If so, see if we can map it to a representation.
+        # First check if we've been given an entity reference as a starting
+        # point. If so, see if we can map it to a representation.
         for entity_info in entity_infos:
             if entity_info.representation_name:
                 return entity_info.representation_name
             if entity_info.workfile_name:
-                file_name, file_ext = os.path.splitext(entity_info.workfile_name)
+                file_name, file_ext = os.path.splitext(
+                    entity_info.workfile_name)
                 if file_ext:
                     return file_ext.lstrip(".")
                 if file_name:
@@ -699,9 +929,11 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
         # TODO(DF): Also map AYON_HOST_NAME env var and/or
         #  `registered_host().extensions()`, if available.
         for traits_data in entity_traits_datas:
-            if WorkTrait.isImbuedTo(traits_data):
-                if mime_type := _host_id_to_mime_type.get(host_session.host().identifier()):
-                    if representation_name := _mime_to_extension.get(mime_type):
+            if WorkTrait.isImbuedTo(traits_data):  # noqa: SIM102
+                if mime_type := _host_id_to_mime_type.get(  # noqa: SIM102
+                        host_session.host().identifier()):
+                    if representation_name := _mime_to_extension.get(
+                            mime_type):
                         return representation_name
 
         return None
@@ -709,19 +941,30 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
     @staticmethod
     def __initial_comment(
         entity_infos: list[ayon.EntityInfo],
-    ):
-        """
-        Attempt to determine an initial target comment.
-        """
-        for entity_info in entity_infos:
-            if entity_info.comment:
-                return entity_info.comment
+    ) -> Optional[str]:
+        """Attempt to determine an initial target comment.
 
-        return None
+        Args:
+            entity_infos (list[ayon.EntityInfo]): The list of entity infos.
+
+        Returns:
+            Optional[str]: The initial comment, or None if not found.
+
+        """
+        return next(
+            (
+                entity_info.comment
+                for entity_info in entity_infos
+                if entity_info.comment
+            ),
+            None,
+        )
 
 
 class WorkfileLoaderWidget(WorkfilesToolWindow):
+    """Widget for loading workfiles from AYON."""
     def __init__(self, ui_traits, request, state, controller):
+        """Construct the workfile loader widget."""
         super().__init__(controller=controller)
         self.__request = request
         self.__state = state
@@ -737,16 +980,19 @@ class WorkfileLoaderWidget(WorkfilesToolWindow):
         # If we want continuous updates, trigger the callback whenever
         # the selection changed. Otherwise, we need OK/Cancel buttons.
         if not SingleUseTrait.isImbuedTo(ui_traits):
-            controller.register_event_callback("selection.workarea.changed", self.__maybe_callback)
+            controller.register_event_callback(
+                "selection.workarea.changed", self.__maybe_callback)
             controller.register_event_callback(
                 "selection.representation.changed", self.__maybe_callback
             )
         else:
             controller.register_event_callback(
-                "selection.workarea.changed", self.__on_ok_button_state_invalidated
+                "selection.workarea.changed",
+                self.__on_ok_button_state_invalidated
             )
             controller.register_event_callback(
-                "selection.representation.changed", self.__on_ok_button_state_invalidated
+                "selection.representation.changed",
+                self.__on_ok_button_state_invalidated
             )
             # The layout of this widget is a HBox, but we need a VBox
             # so we can add OK and Cancel buttons to the bottom right
@@ -774,9 +1020,8 @@ class WorkfileLoaderWidget(WorkfilesToolWindow):
             cancel_btn.clicked.connect(self.__on_cancel_clicked)
             self.__ok_btn = ok_btn
 
-    def __on_cancel_clicked(self):
-        """
-        Callback for the Cancel button.
+    def __on_cancel_clicked(self) -> None:
+        """Callback for the Cancel button.
 
         Note this is only used if SingleUseTrait is imbued to the UI
         traits.
@@ -793,7 +1038,8 @@ class WorkfileLoaderWidget(WorkfilesToolWindow):
         project_name = self._controller.get_current_project_name()
         workfile_path = self._controller.get_selected_workfile_path()
         representation_id = self._controller.get_selected_representation_id()
-        self.__ok_btn.setEnabled(bool(project_name and (representation_id or workfile_path)))
+        self.__ok_btn.setEnabled(bool(
+            project_name and (representation_id or workfile_path)))
 
     def __maybe_callback(self):
         state_changed_cb = self.__request.stateChangedCallback()
@@ -835,8 +1081,10 @@ class WorkfileLoaderWidget(WorkfilesToolWindow):
             #  shown in the browser that do not have corresponding
             #  database entries, in which case resolve() will fail.
 
-            folder_entity = ayon_api.get_folder_by_id(project_name, folder_id, fields=["path"])
-            task_entity = ayon_api.get_task_by_id(project_name, task_id, fields=["name"])
+            folder_entity = ayon_api.get_folder_by_id(
+                project_name, folder_id, fields=["path"])
+            task_entity = ayon_api.get_task_by_id(
+                project_name, task_id, fields=["name"])
             entity_info = ayon.EntityInfo(
                 project_name=project_name,
                 path=folder_entity["path"],
@@ -854,7 +1102,9 @@ class WorkfileLoaderWidget(WorkfilesToolWindow):
 
 
 class RepresentationLoaderWidget(LoaderWindow):
+    """Widget for loading representations from AYON."""
     def __init__(self, ui_traits, request, state, controller):
+        """Construct the representation loader widget."""
         super().__init__(controller)
         self.__request = request
         self.__state = state
@@ -868,7 +1118,8 @@ class RepresentationLoaderWidget(LoaderWindow):
             )
         else:
             self._controller.register_event_callback(
-                "selection.representations.changed", self.__on_ok_button_state_invalidated
+                "selection.representations.changed",
+                self.__on_ok_button_state_invalidated
             )
             # The layout of this widget is a HBox, but we need a VBox
             # so we can add OK and Cancel buttons to the bottom right
@@ -931,7 +1182,9 @@ class RepresentationLoaderWidget(LoaderWindow):
 
 
 class RepresentationPublishController(PushToContextController):
+    """Controller for publishing representations to AYON."""
     def __init__(self, entity_info):
+        """Constructor."""
         super().__init__()
         # Pre-populate text boxes. Tree views are pre-populated in widget
         # constructor.
@@ -943,31 +1196,37 @@ class RepresentationPublishController(PushToContextController):
 
         self._user_values.set_variant(variant_name)
 
-    def set_selected_task(self, task_id, task_name):
-        """
-        Override to invalidate when the task changes.
+    def set_selected_task(self, task_id, task_name) -> None:
+        """Override to invalidate when the task changes.
+
+        Args:
+            task_id (str): The selected task ID.
+            task_name (str): The selected task name.
+
         """
         super().set_selected_task(task_id, task_name)
         self._invalidate()
 
-    def _check_submit_validations(self):
-        """
-        Check if the form is valid for submission.
+    def _check_submit_validations(self) -> bool:
+        """Check if the form is valid for submission.
 
         Override to additionally enforce a task name.
 
         A task name is required when calculating the product name
         during publishing.
+
+        Returns:
+            bool: True if the form is valid for submission,
+                False otherwise.
+
         """
         is_valid = super()._check_submit_validations()
         if not is_valid:
             return False
-        if (
-            not self._selection_model.get_selected_task_name()
-            and not self._user_values.new_folder_name
-        ):
-            return False
-        return True
+        return bool(
+            self._selection_model.get_selected_task_name()
+            or self._user_values.new_folder_name
+        )
 
     def expected_project_selected(self, project_name):
         # Doesn't exist on base, yet will be called by widget.
@@ -983,6 +1242,7 @@ class RepresentationPublishController(PushToContextController):
 
 
 class RepresentationPublishWidget(PushToContextSelectWindow):
+    """Widget for publishing representations to AYON."""
     def __init__(
         self,
         entity_info,
@@ -991,6 +1251,7 @@ class RepresentationPublishWidget(PushToContextSelectWindow):
         state,
         controller,
     ):
+        """Constructor."""
         super().__init__(controller=controller)
         self.__ui_traits = ui_traits
         self.__request = request
@@ -1020,7 +1281,8 @@ class RepresentationPublishWidget(PushToContextSelectWindow):
         # Pre-populate the project combobox.
         if entity_info.project_name is not None:
             self._projects_combobox._handle_expected_selection = True
-            self._projects_combobox._expected_selection = entity_info.project_name
+            self._projects_combobox._expected_selection = (
+                entity_info.project_name)
 
         # Pre-populate the folder tree and task tree widgets.
         if entity_info.comment:
@@ -1060,7 +1322,8 @@ class RepresentationPublishWidget(PushToContextSelectWindow):
             )
         else:
             self._controller.register_event_callback(
-                "submission.enabled.changed", self.__on_ok_button_state_invalidated
+                "submission.enabled.changed",
+                self.__on_ok_button_state_invalidated
             )
             ok_btn = QtWidgets.QPushButton("Save")
             ok_btn.setEnabled(False)
@@ -1085,26 +1348,27 @@ class RepresentationPublishWidget(PushToContextSelectWindow):
             cancel_btn.clicked.connect(self.__on_cancel_clicked)
             self.__ok_btn = ok_btn
 
-    def __on_ok_button_state_invalidated(self, event):
+    def __on_ok_button_state_invalidated(self, event) -> None:
         self.__ok_btn.setEnabled(event.data["enabled"])
 
-    def __on_cancel_clicked(self):
+    def __on_cancel_clicked(self) -> None:
         state_changed_cb = self.__request.stateChangedCallback()
         if state_changed_cb is not None:
             self.__state.setEntityReferences([])
             state_changed_cb(self.__state)
 
-    def _on_user_input_timer(self):
+    def _on_user_input_timer(self) -> None:
         super()._on_user_input_timer()
         if not SingleUseTrait.isImbuedTo(self.__ui_traits):
             self.__maybe_callback()
 
-    def __maybe_callback(self):
-        """
+    def __maybe_callback(self) -> None:
+        """Callback to notify host of selection.
+
         Notify the host application of currently selected entities, if
         any.
-        """
 
+        """
         state_changed_cb = self.__request.stateChangedCallback()
         if state_changed_cb is None:
             return
@@ -1116,9 +1380,11 @@ class RepresentationPublishWidget(PushToContextSelectWindow):
 
         # Extract fields from models.
         # noinspection PyProtectedMember
-        project_name = self._controller._selection_model.get_selected_project_name()
+        project_name = (
+            self._controller._selection_model.get_selected_project_name())
         # noinspection PyProtectedMember
-        selected_folder_id = self._controller._selection_model.get_selected_folder_id()
+        selected_folder_id = (
+            self._controller._selection_model.get_selected_folder_id())
         # noinspection PyProtectedMember
         task_name = self._controller._selection_model.get_selected_task_name()
         # noinspection PyProtectedMember
@@ -1153,12 +1419,21 @@ class RepresentationPublishWidget(PushToContextSelectWindow):
 
 
 class WorkfilePublishController(ContextDialogController):
-    def expected_task_selected(self, folder_id, task_name):
-        # Doesn't exist on base, yet will be called by tasks widget.
-        pass
+    """A controller for publishing workfiles to AYON."""
+    def expected_task_selected(self, folder_id: str, task_name: str) -> None:
+        """Selection of expected task handler.
+
+        Doesn't exist on base, yet will be called by tasks widget.
+
+        Args:
+            folder_id (str): The folder ID.
+            task_name (str): The task name.
+
+        """
 
 
 class WorkfilePublishWidget(ContextDialog):
+    """A dialog for publishing workfiles to AYON."""
     def __init__(
         self,
         entity_info,
@@ -1167,6 +1442,7 @@ class WorkfilePublishWidget(ContextDialog):
         state,
         controller,
     ):
+        """Initialize the workfile publish widget."""
         super().__init__(controller=controller)
         self.__request = request
         self.__state = state
@@ -1181,7 +1457,8 @@ class WorkfilePublishWidget(ContextDialog):
         # Attempt to pre-select fields. Note that the "initial
         # context" mechanism, if used, disables the project combobox.
         if entity_info.project_name:
-            self._controller.set_initial_context(entity_info.project_name, entity_info.path)
+            self._controller.set_initial_context(
+                entity_info.project_name, entity_info.path)
             initial_context = self._controller.get_initial_context()
             initial_folder_id = initial_context["folder_id"]
 
@@ -1211,13 +1488,16 @@ class WorkfilePublishWidget(ContextDialog):
             )
         else:
             self._controller.register_event_callback(
-                "selection.project.changed", self.__on_ok_button_state_invalidated
+                "selection.project.changed",
+                self.__on_ok_button_state_invalidated
             )
             self._controller.register_event_callback(
-                "selection.folder.changed", self.__on_ok_button_state_invalidated
+                "selection.folder.changed",
+                self.__on_ok_button_state_invalidated
             )
             self._controller.register_event_callback(
-                "selection.task.changed", self.__on_ok_button_state_invalidated
+                "selection.task.changed",
+                self.__on_ok_button_state_invalidated
             )
             ok_btn = QtWidgets.QPushButton("Save")
             ok_btn.setEnabled(False)
@@ -1242,17 +1522,20 @@ class WorkfilePublishWidget(ContextDialog):
             cancel_btn.clicked.connect(self.__on_cancel_clicked)
             self.__ok_btn = ok_btn
 
-    def _set_init_context(self, init_context):
-        """
-        Handler for initial context change on controller.
+    def _set_init_context(self, init_context: dict[str, Any]) -> None:
+        """Handler for initial context change on controller.
 
         Override to undo the disabling of project and folder selection.
+
+        Args:
+            init_context (dict[str, Any]): Initial context data.
+
         """
         super()._set_init_context(init_context)
         self._project_combobox.setEnabled(True)
         self._folders_widget.setEnabled(True)
 
-    def __on_ok_button_state_invalidated(self):
+    def __on_ok_button_state_invalidated(self) -> None:
         selected_context = self._controller.get_selected_context()
         project_name = selected_context["project_name"]
         path = selected_context["folder_path"]
@@ -1260,13 +1543,13 @@ class WorkfilePublishWidget(ContextDialog):
 
         self.__ok_btn.setEnabled(bool(project_name and path and task_name))
 
-    def __on_cancel_clicked(self):
+    def __on_cancel_clicked(self) -> None:
         state_changed_cb = self.__request.stateChangedCallback()
         if state_changed_cb is not None:
             self.__state.setEntityReferences([])
             state_changed_cb(self.__state)
 
-    def __maybe_callback(self):
+    def __maybe_callback(self) -> None:
         selected_context = self._controller.get_selected_context()
         project_name = selected_context["project_name"]
         path = selected_context["folder_path"]

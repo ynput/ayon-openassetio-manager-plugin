@@ -142,7 +142,9 @@ function Initialize-Traits {
 
     & "$env:POETRY_HOME\bin\poetry.exe" run openassetio-traitgen -o $temp_traits -g python -v "$($repo_root)\traits.yml"
     Write-Color ">>> ", "Moving traits to repository ..." -Color Green, Gray
-    Move-Item -Path $temp_traits\Ayon\traits\* -Destination "$($repo_root)\AyonOpenAssetIOManager\ayon_traits" -Force
+    Write-Color "  - ", "Source: ", "$temp_traits\Ayon\traits\*" -Color White, Cyan -NoNewline
+    Write-Color " -> ", "Destination: ", "$($repo_root)\plugin\ayon_openassetio_manager\ayon_traits" -Color White, Cyan
+    Move-Item -Path $temp_traits\Ayon\traits\* -Destination "$($repo_root)\plugin\ayon_openassetio_manager\ayon_traits" -Force
     Write-Color -Text ">>> ", "Traits generated." -Color Green, White
 }
 
