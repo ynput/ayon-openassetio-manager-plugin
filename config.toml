@@ -1,0 +1,6 @@
+[manager]
+identifier = "io.ynput.ayon.openassetio.manager"
+
+[manager.settings]
+AYON_SERVER_URL = "http://localhost:5000"  # replace with your AYON server URL
+AYON_BUNDLE_NAME = "dev-03"  # replace with the name of the bundle you want to use
