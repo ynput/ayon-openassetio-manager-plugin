@@ -318,6 +318,8 @@ def publish_representation(
 
     thumbnailSource = file_or_files[0] if isinstance(
         file_or_files, list) else file_or_files
+    if stagingDir := representation_data.get("stagingDir"):
+        thumbnailSource = os.path.join(stagingDir, thumbnailSource)
 
     instance = pyblish_ctx.create_instance(entity_info.product_name)
     instance.data.update(
