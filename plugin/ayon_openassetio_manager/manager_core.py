@@ -411,11 +411,11 @@ class AyonOpenAssetIOManagerInterfaceCore:
                             frame_ranged_trait.setFramesPerSecond(fps)
 
                 # Colour space
-                if mc_traits.color.OCIOColorManagedTrait.kId in trait_set and (
-                colorspace := entity_version["attrib"]["colorSpace"]):
-                    ocio_trait = mc_traits.color.OCIOColorManagedTrait(
-                        traits_data)
-                    ocio_trait.setColorspace(colorspace)
+                if mc_traits.color.OCIOColorManagedTrait.kId in trait_set:
+                    if colorspace := entity_version["attrib"].get("colorSpace"):
+                        ocio_trait = mc_traits.color.OCIOColorManagedTrait(
+                            traits_data)
+                        ocio_trait.setColorspace(colorspace)
 
             if traits_data.traitSet():
                 # Add entity info to context for use in UI pre-population, etc.
