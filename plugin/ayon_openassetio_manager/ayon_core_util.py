@@ -400,7 +400,7 @@ def publish_representation(
 
 def publish_workfile(
     entity_info: ayon.EntityInfo,
-    entity_identity: dict[str, str],
+    task_id: str,
     workfile_path: str,
     note: str = "",
 ) -> None:
@@ -410,14 +410,13 @@ def publish_workfile(
 
     Args:
         entity_info (ayon.EntityInfo): The entity information.
-        entity_identity (dict[str, str]): The entity identity containing at
-            least the folderId and taskId.
+        task_id (str): Task to associate with workfile.
         workfile_path (str): The path to the workfile to register.
         note (str): An optional note to associate with the workfile.
 
     """
     _OpenAssetIOWorkfileController(OpenAssetIOHost(entity_info)).save_workfile_info(
-        entity_identity["folderId"], entity_info.task_name, workfile_path, note
+        task_id, workfile_path, comment=note
     )
 
 
