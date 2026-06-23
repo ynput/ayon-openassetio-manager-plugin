@@ -21,7 +21,6 @@ dependencies = [
     "attrs",
     # Support caching
     "cachetools",
-    "openassetio-traitgen"
 ]
 
 [project.optional-dependencies]
@@ -36,6 +35,20 @@ ui = [
 openassetio = [
     "openassetio>=1.0.0",
     "openassetio-mediacreation>=1.0.0a12",
+]
+
+[dependency-groups]
+
+traitgen = [
+    "openassetio-traitgen",
+]
+
+dev = [
+    "openassetio>=1.0.0",
+    "openassetio-mediacreation>=1.0.0a12",
+    "pytest",
+    "pytest-print",
+    "ruff",
 ]
 
 [project.urls]
