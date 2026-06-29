@@ -756,6 +756,87 @@ class TestRegister:
         assert pathlib.Path(final_path.format(frame=2)).is_file()
         assert pathlib.Path(final_path.format(frame=1)) != pathlib.Path(final_path.format(frame=2))
 
+    def test_when_publishing_single_file_as_representation_then_creates_non_sequence(
+        self, project: ProjectInfo, manager: Manager
+    ) -> None:
+        # setup
+
+        context = manager.createContext()
+
+        traits_hint = mc_specs.twoDimensional.PlanarBitmapImageResourceSpecification.create().traitsData()
+        mc_traits.timeDomain.FrameRangedTrait.imbueTo(traits_hint)
+
+        working_ref = manager.preflight(
+            entityReference=manager.createEntityReference(
+                f"ayon+entity://{project.project_name}/"
+                f"{project.folder.name}?"
+                "product=plateMainSingle&"
+                "product_type=plate&"
+                "representation=blah"
+            ),
+            traitsHint=traits_hint,
+            publishAccess=access.PublishingAccess.kWrite,
+            context=context,
+        )
+
+        manager_driven_traits_data = manager.resolve(
+            entityReference=working_ref,
+            traitSet={mc_traits.content.LocatableContentTrait.kId},
+            resolveAccess=openassetio.access.ResolveAccess.kManagerDriven,
+            context=context,
+        )
+
+        manager_driven_locatable_content_trait = (
+            mc_traits.content.LocatableContentTrait(manager_driven_traits_data)
+        )
+
+        asset_template_path = FileUrlPathConverter().pathFromUrl(
+            manager_driven_locatable_content_trait.getLocation()
+        )
+
+        asset_path = asset_template_path.format(frame=1)
+        pathlib.Path(asset_path).touch()
+
+        traits_data = TraitsData(traits_hint)
+        mc_traits.content.LocatableContentTrait(traits_data).setLocation(
+            manager_driven_locatable_content_trait.getLocation()
+        )
+
+        # action
+
+        final_ref = manager.register(
+            entityReference=working_ref,
+            entityTraitsData=traits_data,
+            publishAccess=access.PublishingAccess.kWrite,
+            context=context,
+        )
+
+        #  confirm
+
+        expected_final_ref = manager.createEntityReference(
+            f"ayon+entity://{project.project_name}/"
+            f"{project.folder.name}?"
+            "product=plateMainSingle&"
+            "version=v001&"
+            "representation=blah"
+        )
+
+        assert final_ref == expected_final_ref
+
+        final_traits_data = manager.resolve(
+            expected_final_ref,
+            {mc_traits.content.LocatableContentTrait.kId},
+            access.ResolveAccess.kRead,
+            context,
+        )
+
+        final_uri = mc_traits.content.LocatableContentTrait(
+            final_traits_data
+        ).getLocation()
+
+        final_path = FileUrlPathConverter().pathFromUrl(final_uri)
+        assert pathlib.Path(final_path).is_file()
+
     def test_when_publishing_to_new_workfile_then_creates_new_workfile_entry(
         self, project: ProjectInfo, manager: Manager
     ) -> None:

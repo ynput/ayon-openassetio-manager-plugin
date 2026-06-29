@@ -1,7 +1,7 @@
 [project]
 name = "ayon-openassetio-manager-plugin"
 version = "0.2.0"
-requires-python = ">=3.10,<3.12"
+requires-python = ">=3.10,<3.14"
 authors = [
     { name="AYON Team", email = "info@ynput.io" }
 ]
@@ -21,7 +21,6 @@ dependencies = [
     "attrs",
     # Support caching
     "cachetools",
-    "openassetio-traitgen"
 ]
 
 [project.optional-dependencies]
@@ -36,6 +35,20 @@ ui = [
 openassetio = [
     "openassetio>=1.0.0",
     "openassetio-mediacreation>=1.0.0a12",
+]
+
+[dependency-groups]
+
+traitgen = [
+    "openassetio-traitgen",
+]
+
+dev = [
+    "openassetio>=1.0.0",
+    "openassetio-mediacreation>=1.0.0a12",
+    "pytest",
+    "pytest-print",
+    "ruff",
 ]
 
 [project.urls]

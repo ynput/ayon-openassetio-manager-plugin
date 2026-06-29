@@ -411,11 +411,11 @@ class AyonOpenAssetIOManagerInterfaceCore:
                             frame_ranged_trait.setFramesPerSecond(fps)
 
                 # Colour space
-                if mc_traits.color.OCIOColorManagedTrait.kId in trait_set and (
-                colorspace := entity_version["attrib"]["colorSpace"]):
-                    ocio_trait = mc_traits.color.OCIOColorManagedTrait(
-                        traits_data)
-                    ocio_trait.setColorspace(colorspace)
+                if mc_traits.color.OCIOColorManagedTrait.kId in trait_set:
+                    if colorspace := entity_version["attrib"].get("colorSpace"):
+                        ocio_trait = mc_traits.color.OCIOColorManagedTrait(
+                            traits_data)
+                        ocio_trait.setColorspace(colorspace)
 
             if traits_data.traitSet():
                 # Add entity info to context for use in UI pre-population, etc.
@@ -623,7 +623,7 @@ class AyonOpenAssetIOManagerInterfaceCore:
         )
 
         for idx, (entity_ref, entity_traits_data) in enumerate(
-            zip(target_entity_refs, entity_traits_datas)
+            zip(target_entity_refs, entity_traits_datas, strict=True)
         ):
             entity_info = ayon.parse_entity_ref(str(entity_ref))
             is_workfile = entity_info.representation_name is None
@@ -656,7 +656,7 @@ class AyonOpenAssetIOManagerInterfaceCore:
                 instance_data["colorspace"] = colorspace
 
             # Find all the files.
-            file_or_files: list[str] = []
+            multiple_files: list[str] = []
             single_file: str | None = None
             if url := mc_traits.content.LocatableContentTrait(
                     entity_traits_data).getLocation():
@@ -665,7 +665,7 @@ class AyonOpenAssetIOManagerInterfaceCore:
                     self.__fileUrlPathConverter.pathFromUrl(url)
                 )
                 if is_workfile:
-                    file_or_files = [str(path)]
+                    single_file = str(path)
                 else:
                     # AYON uses "stagingDir" to mean the parent directory that
                     # all the files were written to. This could be the staging
@@ -675,7 +675,7 @@ class AyonOpenAssetIOManagerInterfaceCore:
                     # artifacts can be found.
                     instance_data["stagingDir"] = str(path.parent)
                     if not frame_ranged_trait.isImbued():
-                        file_or_files.append(path.name)
+                        single_file = path.name
                     else:
                         # TODO(DF): We assume that the frame token is
                         #  in the file name(s), rather than in a directory
@@ -683,66 +683,68 @@ class AyonOpenAssetIOManagerInterfaceCore:
                         frame_token = self.__create_frame_token(
                             entity_info.project_name, host_session
                         )
+                        start_frame = frame_ranged_trait.getStartFrame()
+                        end_frame = frame_ranged_trait.getEndFrame()
 
                         if frame_token not in path.name:
                             # Assume a single file, i.e. not a file
                             # sequence. In particular, a video file may
                             # have a frame range, but is only a single
                             # file.
-                            file_or_files.append(path.name)
+                            single_file = path.name
 
-                        elif (
-                            frame_ranged_trait.getStartFrame() is None
-                            or frame_ranged_trait.getEndFrame() is None
-                        ):
+                        elif start_frame is None or end_frame is None:
                             # No frame range is specified, so try a glob of the
                             # file system.
                             glob_path = path.with_name(
-                                path.name.replace(frame_token, "*"))
-                            file_or_files.extend(
-                                f.name for f in glob_path.parent.glob(
-                                    glob_path.name)
+                                path.name.replace(frame_token, "*")
+                            )
+                            multiple_files.extend(
+                                f.name
+                                for f in glob_path.parent.glob(glob_path.name)
                             )
 
                         else:
                             # Frame range is specified, so we trust that it's
                             # accurate, and generate a list of files.
                             frame_padding = self.__query_frame_padding(
-                                entity_info.project_name)
-                            frame_range = range(
-                                frame_ranged_trait.getStartFrame(),
-                                frame_ranged_trait.getEndFrame() + 1,
+                                entity_info.project_name
                             )
+                            frame_range = range(start_frame, end_frame + 1)
 
-                            file_or_files.extend(
+                            multiple_files.extend(
                                 path.name.replace(
-                                    frame_token,
-                                    f"{frame:0{frame_padding}}")
+                                    frame_token, f"{frame:0{frame_padding}}"
+                                )
                                 for frame in frame_range
                             )
 
-                    if len(file_or_files) == 1:
-                        # AYON will complain if we try to pass a "sequence"
-                        # containing a single file. We flag that it's not a
-                        # sequence by passing a single string.
-                        single_file = file_or_files[0]
-
-            if not file_or_files or not single_file:
-                host_session.logger().error(
-                    f"No files found to publish for entity reference '{entity_ref}': "
-                    f"{file_or_files}")
-                error_callback(
-                    idx, BatchElementError(
-                        BatchElementError.ErrorCode.kInvalidPreflightHint,
-                        "No files found to publish."))
-                continue
+            if len(multiple_files) == 1:
+                # AYON will complain if we try to pass a "sequence" containing
+                # a single file. We flag that it's not a sequence by passing a
+                # single string.
+                single_file = multiple_files.pop()
 
             if not is_workfile:
+                if not single_file and not multiple_files:
+                    host_session.logger().error(
+                        "No files found to publish representation for entity"
+                        f" reference '{entity_ref}'"
+                    )
+                    error_callback(
+                        idx,
+                        BatchElementError(
+                            BatchElementError.ErrorCode.kInvalidPreflightHint,
+                            "No files found to publish representation.",
+                        ),
+                    )
+                    continue
+
                 # Execute the AYON Pyblish process.
                 published_ids = ayon_core_util.publish_representation(
                     entity_info,
                     instance_data,
-                    file_or_files or single_file,
+                    single_file or multiple_files,
                     host_session.logger(),
                 )
                 # Convert IDs to AYON URIs (i.e. entity references).
@@ -753,17 +755,28 @@ class AyonOpenAssetIOManagerInterfaceCore:
                 )
                 final_entity_ref_str = uri_response.data["uris"][-1]["uri"]
             else:
+                if not single_file:
+                    host_session.logger().error(
+                        "No files found to publish workfile for entity"
+                        f" reference '{entity_ref}'"
+                    )
+                    error_callback(
+                        idx,
+                        BatchElementError(
+                            BatchElementError.ErrorCode.kInvalidPreflightHint,
+                            "No files found to publish workfile.",
+                        ),
+                    )
+                    continue
+
                 # Assume a (in-progress) workfile
                 ayon_core_util.publish_workfile(
                     entity_info,
-                    entity_identities[idx]["entities"][-1],
+                    entity_identities[idx]["entities"][-1]["taskId"],
                     single_file
                 )
-                file = (
-                    file_or_files[0]
-                    if isinstance(file_or_files, list) else file_or_files
-                )
-                entity_info.workfile_name = pathlib.Path(file).name
+
+                entity_info.workfile_name = pathlib.Path(single_file).name
                 entity_info.representation_name = None
                 entity_info.product_name = None
                 entity_info.product_type = None
