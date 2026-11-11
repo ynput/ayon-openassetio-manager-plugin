@@ -439,6 +439,7 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
         ]
 
         entity_info = ayon.EntityInfo(
+            uri="",
             project_name=cls.__initial_project_name(entity_infos, context),
             path=cls.__initial_folder_path(entity_infos),
             task_name=cls.__initial_task_name(entity_infos),
@@ -506,6 +507,7 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
         ]
 
         entity_info = ayon.EntityInfo(
+            uri="",
             project_name=cls.__initial_project_name(entity_infos, context),
             path=cls.__initial_folder_path(entity_infos),
             task_name=cls.__initial_task_name(entity_infos),
@@ -569,6 +571,7 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
         comment = cls.__initial_comment(entity_infos)
 
         entity_info = ayon.EntityInfo(
+            uri="",
             project_name=project_name,
             path=folder_path,
             task_name=task_name,
@@ -625,6 +628,7 @@ class AyonOpenAssetIOUIDelegateInterfaceCore:
             return None
 
         entity_info = ayon.EntityInfo(
+            uri="",
             project_name=cls.__initial_project_name(entity_infos, context),
             path=cls.__initial_folder_path(entity_infos),
             task_name=cls.__initial_task_name(entity_infos),
@@ -1086,6 +1090,7 @@ class WorkfileLoaderWidget(WorkfilesToolWindow):
             task_entity = ayon_api.get_task_by_id(
                 project_name, task_id, fields=["name"])
             entity_info = ayon.EntityInfo(
+                uri="",
                 project_name=project_name,
                 path=folder_entity["path"],
                 task_name=task_entity["name"],
@@ -1398,6 +1403,7 @@ class RepresentationPublishWidget(PushToContextSelectWindow):
         )["path"]
 
         entity_info = ayon.EntityInfo(
+            uri="",
             project_name=project_name,
             path=selected_folder_path,
             task_name=task_name,
@@ -1563,6 +1569,7 @@ class WorkfilePublishWidget(ContextDialog):
             state_changed_cb(self.__state)
             return
         entity_info = ayon.EntityInfo(
+            uri="",
             project_name=project_name,
             path=path,
             task_name=task_name,
