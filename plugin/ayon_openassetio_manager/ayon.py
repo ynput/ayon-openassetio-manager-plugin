@@ -4,6 +4,7 @@ Utilities available without (i.e. prior to) importing the ayon_core library.
 """
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import pathlib
@@ -42,6 +43,38 @@ env_var_settings = [
 ]
 
 
+def _bootstrap_from_environment() -> bool:
+    """Use 'ayon_core' if it is already importable.
+
+    That is the case when the host is launched through AYON launcher
+    (e.g. with the 'openassetio' AYON addon), including dev bundles whose
+    addons are not in the launcher cache.
+
+    Returns:
+        bool: True if 'ayon_core' was found and bootstrapped.
+
+    """
+    spec = importlib.util.find_spec("ayon_core")
+    if spec is None or not spec.submodule_search_locations:
+        return False
+
+    core_package_dir = pathlib.Path(
+        next(iter(spec.submodule_search_locations))
+    )
+    # Sundry utils for UI delegate usage.
+    core_addon_vendor_dir = core_package_dir / "vendor" / "python"
+    if (
+        core_addon_vendor_dir.is_dir()
+        and str(core_addon_vendor_dir) not in sys.path
+    ):
+        sys.path.append(str(core_addon_vendor_dir))
+
+    from . import ayon_core_util
+
+    ayon_core_util.bootstrap_pyblish()
+    return True
+
+
 def bootstrap_ayon_core(
         bundle_name: str, bundles_info: BundlesInfoDict) -> None:
     """Appends the AYON core addon and dependency directories to sys.path.
@@ -62,6 +95,9 @@ def bootstrap_ayon_core(
             directories do not exist.
 
     """
+    if _bootstrap_from_environment():
+        return
+
     ayon_storage_dir = pathlib.Path(
         os.environ.get(
             CLIENT_LAUNCHER_STORAGE_DIR_KEY,
